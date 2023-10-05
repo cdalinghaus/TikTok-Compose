@@ -641,7 +641,7 @@ object VideoDataSource {
 
     val videosList = arrayListOf<VideoModel>().apply {
         addAll(KylieJennerVideos.kylieVideosList)
-        addAll(CharliePuthVideos.charliePuthVideos)
+        /*addAll(CharliePuthVideos.charliePuthVideos)
         addAll(ImagineDragonsVideos.imageDragonsVideosList)
         addAll(DuaLipaVideos.dualipaVideos)
         addAll(GoogleVideos.googleVideosList)
@@ -649,7 +649,7 @@ object VideoDataSource {
         addAll(ShanaVideos.shanVideosList)
         addAll(TaylorVideos.taylorVideos)
         addAll(JeremyVideos.jeremeyVideosList)
-        addAll(ZoyaVideos.zoyaVideosList)
+        addAll(ZoyaVideos.zoyaVideosList)*/
     }
 
     fun fetchVideos(): Flow<List<VideoModel>> {

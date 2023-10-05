@@ -1,6 +1,7 @@
 package com.puskal.composable
 
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -58,14 +59,40 @@ fun TikTokVerticalVideoPager(
     val coroutineScope = rememberCoroutineScope()
     val localDensity = LocalDensity.current
 
+    // Make videos mutable
+    var mutable_videos by remember { mutableStateOf(videos) }
+
     val fling = PagerDefaults.flingBehavior(
         state = pagerState, lowVelocityAnimationSpec = tween(
             easing = LinearEasing, durationMillis = 300
         )
     )
 
+    LaunchedEffect(pagerState) {
+        // Collect from the a snapshotFlow reading the currentPage
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            // Do something with each page change, for example:
+            // viewModel.sendPageSelectedEvent(page)
+            //Log.d("Page change", "Page changed to $page")
+
+            //val length: Int = mutable_videos.size
+            //Log.d("Page change", "List length is now $length")
+            // Ensure the list is not empty to avoid an exception
+            if (mutable_videos.isNotEmpty()) {
+                // Select the last element
+                val lastVideo = mutable_videos.last()
+
+                // Append it to the end of the list
+                mutable_videos = mutable_videos + lastVideo
+            }
+            //Log.d("Page change", "List length is now (after the code $length")
+
+
+        }
+    }
+
     VerticalPager(
-        pageCount = videos.size,
+        pageCount = mutable_videos.size,
         state = pagerState,
         flingBehavior = fling,
         beyondBoundsPageCount = 1,
@@ -83,13 +110,13 @@ fun TikTokVerticalVideoPager(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            VideoPlayer(videos[it], pagerState, it, onSingleTap = {
+            VideoPlayer(mutable_videos[it], pagerState, it, onSingleTap = {
                 pauseButtonVisibility = it.isPlaying
                 it.playWhenReady = !it.isPlaying
             },
                 onDoubleTap = { exoPlayer, offset ->
                     coroutineScope.launch {
-                        videos[it].currentViewerInteraction.isLikedByYou = true
+                        mutable_videos[it].currentViewerInteraction.isLikedByYou = true
                         val rotationAngle = (-10..10).random()
                         doubleTapState = Triple(offset, true, rotationAngle.toFloat())
                         delay(400)
@@ -113,7 +140,7 @@ fun TikTokVerticalVideoPager(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        item = videos[it],
+                        item = mutable_videos[it],
                         showUploadDate=showUploadDate,
                         onClickAudio = onClickAudio,
                         onClickUser = onClickUser,
@@ -121,7 +148,7 @@ fun TikTokVerticalVideoPager(
 
                     SideItems(
                         modifier = Modifier,
-                        videos[it],
+                        mutable_videos[it],
                         doubleTabState = doubleTapState,
                         onclickComment = onclickComment,
                         onClickUser = onClickUser,
