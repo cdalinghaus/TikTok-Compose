@@ -36,6 +36,105 @@ import com.puskal.theme.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
+import retrofit2.http.GET
+import retrofit2.http.Query
+import retrofit2.Response
+
+
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+import android.content.Context
+import android.os.Environment
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+
+data class Author(
+    val id: Int,
+    val username: String,
+    val picture_url: String,
+    val follower_count: Int,
+    val play_count: Int,
+    val video_count: Int
+)
+
+data class Video(
+    val unique_id: String,
+    val slug: String,
+    val playable: Boolean,
+    val watermark_available: Boolean,
+    val plays: Int,
+    val like_count: Int,
+    val save_count: Int,
+    val prompt: String,
+    val description: String,
+    val derived: Boolean,
+    val url: String,
+    val desktop_url: String,
+    val download_url: String,
+    val boomerang_url: String,
+    val thumbnail_url: String,
+    val async_watchtime99: Double,
+    val async_watchtime95: Double,
+    val async_watchtime90: Double,
+    val author: Author,
+    val has_liked: Boolean,
+    val sfw_status: Int,
+    val created_at: String
+)
+
+data class FeedResponse(
+    val stream_id: String,
+    val videos: List<VideoModel>
+)
+
+interface StatisticsApi {
+
+    @GET("feed")
+    suspend fun getFeed(
+        @Query("stream") param: String,
+        @Query("explored_until") exploredUntil: Int
+    ): Response<FeedResponse>
+}
+
+
+
+suspend fun downloadAndSaveVideo(context: Context, videoUrl: String, fileName: String) {
+    withContext(Dispatchers.IO) {
+        val client = OkHttpClient()
+        val request = Request.Builder().url(videoUrl).build()
+
+        try {
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val inputStream = response.body?.byteStream()
+                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
+
+                FileOutputStream(file).use { outputStream ->
+                    inputStream?.copyTo(outputStream)
+                    //Log.d("DOWNLOADED", file.toString())
+                }
+
+                // Update the video.videoLink with the local file path
+                // video.videoLink = file.absolutePath
+            } else {
+                // Handle the error
+            }
+        } catch (e: IOException) {
+            // Handle the exception
+        }
+    }
+}
+
+
 /**
  * Created by Puskal Khadka on 3/16/2023.
  */
@@ -61,6 +160,9 @@ fun TikTokVerticalVideoPager(
 
     // Make videos mutable
     var mutable_videos by remember { mutableStateOf(videos) }
+    var stream_id by remember { mutableStateOf("") }
+    var explored_until by remember { mutableStateOf(0) }
+    val context = LocalContext.current
 
     val fling = PagerDefaults.flingBehavior(
         state = pagerState, lowVelocityAnimationSpec = tween(
@@ -74,18 +176,67 @@ fun TikTokVerticalVideoPager(
             // Do something with each page change, for example:
             // viewModel.sendPageSelectedEvent(page)
             //Log.d("Page change", "Page changed to $page")
+            explored_until = page
 
-            //val length: Int = mutable_videos.size
+            val length: Int = mutable_videos.size
             //Log.d("Page change", "List length is now $length")
             // Ensure the list is not empty to avoid an exception
-            if (mutable_videos.isNotEmpty()) {
-                // Select the last element
-                val lastVideo = mutable_videos.last()
 
-                // Append it to the end of the list
-                mutable_videos = mutable_videos + lastVideo
-            }
+
             //Log.d("Page change", "List length is now (after the code $length")
+
+            val retrofit = Retrofit.Builder()
+                .baseUrl("https://api.reemix.co/api/v2/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val statisticsApi = retrofit.create(StatisticsApi::class.java)
+
+            CoroutineScope(Dispatchers.IO).launch {
+
+                val tmpr = statisticsApi.getFeed(stream_id, explored_until)
+                //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
+
+
+                val response = statisticsApi.getFeed(stream_id, explored_until)
+                //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
+                if (response.isSuccessful) {
+                    val feedResponse = response.body()
+
+                    //Log.d("MUTABLE VIDEOS", mutable_videos.toString())
+                    //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
+
+                    if(stream_id.length < 3) {
+                        stream_id = response.body()!!.stream_id
+                    }
+
+                    val videos_from_api = response.body()!!.videos;
+                    if(videos_from_api.size >= mutable_videos.size) {
+                        //Log.d("VIDEO INFO", videos_from_api.toString())
+                        mutable_videos = videos_from_api
+                    }
+
+                    for (video in videos_from_api) {
+                        //Log.d("videolink", video.videoLink)
+
+                        CoroutineScope(Dispatchers.IO).launch {
+                            val videoUrl = video.videoLink
+                            val fileName = video.videoLink.split("/").last()
+                            downloadAndSaveVideo(context, videoUrl, fileName)
+                        }
+                        // Update UI or video player with the new local path
+
+
+                    }
+
+
+                    //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
+
+                    //Log.d("FEED RESPONSE", feedResponse.toString())
+                } else {
+                    // Handle error
+                }
+            }
 
 
         }
@@ -261,7 +412,7 @@ fun SideItems(
             }
         }
         LikeIconButton(isLiked = isLiked,
-            likeCount = item.videoStats.formattedLikeCount,
+            likeCount = "123",
             onLikedClicked = {
                 isLiked = it
                 item.currentViewerInteraction.isLikedByYou = it
@@ -277,7 +428,7 @@ fun SideItems(
                     onclickComment(item.videoId)
                 })
         Text(
-            text = item.videoStats.formattedCommentCount,
+            text = "this is the text",
             style = MaterialTheme.typography.labelMedium
         )
         16.dp.Space()
@@ -291,7 +442,7 @@ fun SideItems(
             modifier = Modifier.size(33.dp)
         )
         Text(
-            text = item.videoStats.formattedFavouriteCount,
+            text = "0",
             style = MaterialTheme.typography.labelMedium
         )
         14.dp.Space()
@@ -311,7 +462,7 @@ fun SideItems(
                 }
         )
         Text(
-            text = item.videoStats.formattedShareCount, style = MaterialTheme.typography.labelMedium
+            text = "0", style = MaterialTheme.typography.labelMedium
         )
         20.dp.Space()
 

@@ -6,15 +6,15 @@ import com.puskal.core.extension.formattedCount
  * Created by Puskal Khadka on 3/18/2023.
  */
 data class UserModel(
-    val userId: Long,
-    val uniqueUserName: String,
-    val fullName: String,
-    val following: Long,
-    val followers: Long,
-    val likes: Long,
-    val bio: String,
-    val profilePic: String,
-    val isVerified: Boolean,
+    val userId: Long = 12333,
+    val uniqueUserName: String = "PETEROTTO123",
+    val fullName: String = "PETER OTTO",
+    val following: Long = 123333,
+    val followers: Long = 1233,
+    val likes: Long = 123,
+    val bio: String = "lelo",
+    val profilePic: String = "lel",
+    val isVerified: Boolean = false,
     val isLikedVideoPrivate: Boolean = true,
     val pinSocialMedia: SocialMedia? = null
 ) {

@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.hardware.camera.any" />
+    <uses-permission android:name="android.MediaStore.createWriteRequest"/>
 
     <application
         android:name="com.puskal.tiktokcompose.MyApp"

@@ -31,12 +31,13 @@ android {
         }
         getByName("release") {
             isDebuggable = false
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             initWith(getByName("release"))
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -58,6 +59,8 @@ android {
     packagingOptions {
         resources.excludes.add("META-INF/**/*")
     }
+
+
 }
 
 

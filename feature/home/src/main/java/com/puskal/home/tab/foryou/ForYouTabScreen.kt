@@ -39,7 +39,7 @@ fun ForYouTabScreen(
         viewState?.forYouPageFeed?.let {
 
             TikTokVerticalVideoPager(
-                videos = it,
+                videos = it.take(0),
                 onclickComment = { navController.navigate(COMMENT_BOTTOM_SHEET_ROUTE) },
                 onClickLike = { s: String, b: Boolean -> },
                 onclickFavourite = {},

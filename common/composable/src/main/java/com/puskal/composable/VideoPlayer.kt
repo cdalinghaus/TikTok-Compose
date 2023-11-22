@@ -2,7 +2,10 @@ package com.puskal.composable
 
 
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Environment
+import android.util.Log
 import android.view.ViewGroup
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -33,6 +36,7 @@ import com.puskal.data.model.VideoModel
 import com.puskal.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Created by Puskal Khadka on 3/16/2023.
@@ -57,20 +61,61 @@ fun VideoPlayer(
 
     LaunchedEffect(key1 = true) {
         withContext(Dispatchers.IO) {
-            val bm = FileUtils.extractThumbnail(
-                context.assets.openFd("videos/${video.videoLink}"), 1
-            )
-            withContext(Dispatchers.Main) {
-                thumbnail = thumbnail.copy(first = bm, second = thumbnail.second)
+            val bitmap: Bitmap? = if (video.videoLink.startsWith("https://")) {
+                // For remote URLs
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(video.videoLink, HashMap())
+                    val timeUs = 1_000L  // 1 millisecond into the video
+                    retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                } catch (e: Exception) {
+                    Log.e("ThumbnailExtraction", "Failed to extract thumbnail", e)
+                    null
+                } finally {
+                    retriever.release()
+                }
+            } else {
+                // For local assets
+                FileUtils.extractThumbnail(
+                    context.assets.openFd("videos/${video.videoLink}"), 1
+                )
+            }
+            bitmap?.let { bm ->
+                withContext(Dispatchers.Main) {
+                    thumbnail = thumbnail.copy(first = bm, second = thumbnail.second)
+                }
             }
         }
     }
+
+
     if (pagerState.settledPage == pageIndex) {
         val exoPlayer = remember(context) {
             ExoPlayer.Builder(context).build().apply {
                 videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                 repeatMode = Player.REPEAT_MODE_ONE
-                setMediaItem(MediaItem.fromUri(Uri.parse("asset:///videos/${video.videoLink}")))
+
+                val fileName = video.videoLink.split("/").last()
+                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
+
+                if(file.exists()) {
+                    setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
+                }
+                /*
+                if(video.videoLink.startsWith("https://")) {
+                    val fileName = video.videoLink.split("/").last()
+                    val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
+
+                    if(file.exists()) {
+                        setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
+                    } else {
+                        setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                    }
+
+                } else {
+                    setMediaItem(MediaItem.fromUri(Uri.parse("file:///android_asset/videos/${video.videoLink}")))
+                }*/
+
                 playWhenReady = true
                 prepare()
                 addListener(object : Player.Listener {
