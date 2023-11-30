@@ -95,26 +95,9 @@ fun VideoPlayer(
                 videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                 repeatMode = Player.REPEAT_MODE_ONE
 
-                val fileName = video.videoLink.split("/").last()
-                val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
-
-                if(file.exists()) {
-                    setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
-                }
-                /*
-                if(video.videoLink.startsWith("https://")) {
-                    val fileName = video.videoLink.split("/").last()
-                    val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
-
-                    if(file.exists()) {
-                        setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
-                    } else {
-                        setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                    }
-
-                } else {
-                    setMediaItem(MediaItem.fromUri(Uri.parse("file:///android_asset/videos/${video.videoLink}")))
-                }*/
+                //val fileName = video.videoLink.split("/").last()
+                //val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
+                setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
 
                 playWhenReady = true
                 prepare()

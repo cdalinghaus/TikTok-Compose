@@ -35,6 +35,7 @@ import com.puskal.theme.*
 import com.puskal.theme.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -172,74 +173,79 @@ fun TikTokVerticalVideoPager(
 
     LaunchedEffect(pagerState) {
         // Collect from the a snapshotFlow reading the currentPage
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-            // Do something with each page change, for example:
-            // viewModel.sendPageSelectedEvent(page)
-            //Log.d("Page change", "Page changed to $page")
-            explored_until = page
+            snapshotFlow { pagerState.currentPage }.collect { page ->
+                // Do something with each page change, for example:
+                // viewModel.sendPageSelectedEvent(page)
+                //Log.d("Page change", "Page changed to $page")
+                explored_until = page
 
-            val length: Int = mutable_videos.size
-            //Log.d("Page change", "List length is now $length")
-            // Ensure the list is not empty to avoid an exception
-
-
-            //Log.d("Page change", "List length is now (after the code $length")
-
-            val retrofit = Retrofit.Builder()
-                .baseUrl("https://api.reemix.co/api/v2/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-
-            val statisticsApi = retrofit.create(StatisticsApi::class.java)
-
-            CoroutineScope(Dispatchers.IO).launch {
-
-                val tmpr = statisticsApi.getFeed(stream_id, explored_until)
-                //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
+                val length: Int = mutable_videos.size
+                //Log.d("Page change", "List length is now $length")
+                // Ensure the list is not empty to avoid an exception
 
 
-                val response = statisticsApi.getFeed(stream_id, explored_until)
-                //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
-                if (response.isSuccessful) {
-                    val feedResponse = response.body()
+                //Log.d("Page change", "List length is now (after the code $length")
 
-                    //Log.d("MUTABLE VIDEOS", mutable_videos.toString())
-                    //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
+                val retrofit = Retrofit.Builder()
+                    .baseUrl("https://api.reemix.co/api/v2/")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
 
-                    if(stream_id.length < 3) {
-                        stream_id = response.body()!!.stream_id
-                    }
+                val statisticsApi = retrofit.create(StatisticsApi::class.java)
 
-                    val videos_from_api = response.body()!!.videos;
-                    if(videos_from_api.size >= mutable_videos.size) {
-                        //Log.d("VIDEO INFO", videos_from_api.toString())
-                        mutable_videos = videos_from_api
-                    }
+                CoroutineScope(Dispatchers.IO).launch {
 
-                    for (video in videos_from_api) {
-                        //Log.d("videolink", video.videoLink)
+                    // val tmpr = statisticsApi.getFeed(stream_id, explored_until)
+                    //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
 
-                        CoroutineScope(Dispatchers.IO).launch {
-                            val videoUrl = video.videoLink
-                            val fileName = video.videoLink.split("/").last()
-                            downloadAndSaveVideo(context, videoUrl, fileName)
+
+                    val response = statisticsApi.getFeed(stream_id, explored_until)
+                    Log.d("STREAMID", "Loading stream " + stream_id)
+                    if (response.isSuccessful) {
+                        val feedResponse = response.body()
+
+                        //Log.d("MUTABLE VIDEOS", mutable_videos.toString())
+                        //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
+
+                        if (stream_id.length < 3) {
+                            stream_id = response.body()!!.stream_id
                         }
-                        // Update UI or video player with the new local path
+
+                        val videos_from_api = response.body()!!.videos;
+                        if (videos_from_api.size >= mutable_videos.size) {
+                            //Log.d("VIDEO INFO", videos_from_api.toString())
+                            if(videos_from_api.size == 1) {
+                                mutable_videos = videos_from_api + videos_from_api
+                            } else {
+                                mutable_videos = videos_from_api
+                            }
+
+                        }
+
+                        for (video in videos_from_api) {
+                            //Log.d("videolink", video.videoLink)
+
+                            CoroutineScope(Dispatchers.IO).launch {
+                                val videoUrl = video.videoLink
+                                val fileName = video.videoLink.split("/").last()
+                                downloadAndSaveVideo(context, videoUrl, fileName)
+                            }
+                            // Update UI or video player with the new local path
 
 
+                        }
+
+
+                        //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
+
+                        //Log.d("FEED RESPONSE", feedResponse.toString())
+                    } else {
+                        // Handle error
                     }
-
-
-                    //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
-
-                    //Log.d("FEED RESPONSE", feedResponse.toString())
-                } else {
-                    // Handle error
                 }
+
+
             }
-
-
-        }
     }
 
     VerticalPager(
