@@ -1,5 +1,6 @@
 package com.puskal.commentlisting
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.puskal.core.base.BaseViewModel
 import com.puskal.domain.comment.GetCommentOnVideoUseCase
@@ -12,16 +13,19 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class CommentListViewModel @Inject constructor(
-    private val getCommentOnVideoUseCase: GetCommentOnVideoUseCase
+    private val getCommentOnVideoUseCase: GetCommentOnVideoUseCase,
+    savedStateHandle: SavedStateHandle
 ) : BaseViewModel<ViewState, CommentEvent>() {
 
     init {
-        getContentCreator()
+
+        val videoId = savedStateHandle.get<String>("videoId") ?: throw IllegalStateException("Video ID is required")
+        getContentCreator(videoId)
     }
 
-    private fun getContentCreator() {
+    private fun getContentCreator(videoId: String) {
         viewModelScope.launch {
-            getCommentOnVideoUseCase("vid").collect {
+            getCommentOnVideoUseCase(videoId).collect {
                 updateState(ViewState(comments = it))
             }
         }

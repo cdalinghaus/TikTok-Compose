@@ -12,7 +12,9 @@ import com.puskal.core.DestinationRoute.COMMENT_BOTTOM_SHEET_ROUTE
 
 @OptIn(ExperimentalMaterialNavigationApi::class)
 fun NavGraphBuilder.commentListingNavGraph(navController: NavController) {
-    bottomSheet(route = COMMENT_BOTTOM_SHEET_ROUTE) {
-        CommentListScreen(onClickCancel = { navController.navigateUp() })
+    bottomSheet(route = "$COMMENT_BOTTOM_SHEET_ROUTE/{videoId}") { backStackEntry ->
+        val videoId = backStackEntry.arguments?.getString("videoId")
+            ?: throw IllegalStateException("Video ID is required")
+        CommentListScreen(videoId = videoId, onClickCancel = { navController.navigateUp() })
     }
 }

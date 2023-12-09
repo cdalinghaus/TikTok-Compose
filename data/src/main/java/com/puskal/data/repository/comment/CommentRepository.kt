@@ -9,7 +9,7 @@ import javax.inject.Inject
  * Created by Puskal Khadka on 3/22/2023.
  */
 class CommentRepository @Inject constructor() {
-    fun getComment(videoId: String): Flow<CommentList> {
+    suspend fun getComment(videoId: String): CommentList {
         return fetchComment(videoId)
     }
 }

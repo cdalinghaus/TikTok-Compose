@@ -1,5 +1,6 @@
 package com.puskal.commentlisting
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,8 +10,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,12 +30,24 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+
+import com.puskal.composable.downloadAndSaveVideo
 import com.puskal.core.extension.Space
 import com.puskal.data.model.CommentList
+import com.puskal.data.model.VideoModel
 import com.puskal.theme.DarkBlue
 import com.puskal.theme.GrayMainColor
 import com.puskal.theme.R
 import com.puskal.theme.SubTextColor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 
 /**
@@ -40,11 +55,15 @@ import com.puskal.theme.SubTextColor
  */
 
 
+
+
 @Composable
 fun CommentListScreen(
-    viewModel: CommentListViewModel = hiltViewModel(),
+    videoId: String = "pass_test",
     onClickCancel: () -> Unit
 ) {
+
+    val viewModel: CommentListViewModel = hiltViewModel()
     val viewState by viewModel.viewState.collectAsState()
 
     Column(
@@ -87,8 +106,8 @@ fun CommentListScreen(
 
 
         CommentUserField()
+        }
     }
-}
 
 
 @Composable
