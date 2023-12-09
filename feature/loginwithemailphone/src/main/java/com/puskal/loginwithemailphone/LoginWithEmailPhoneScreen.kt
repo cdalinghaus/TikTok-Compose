@@ -66,7 +66,7 @@ fun LoginWithEmailPhoneScreen(
 @Composable
 internal fun LoginPager(viewModel: LoginWithEmailPhoneViewModel) {
     val pagerState = rememberPagerState()
-    val pages = LoginPages.values().asList()
+    val pages = LoginPages.values().asList().slice(1..1)
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(key1 = pagerState) {
         snapshotFlow { pagerState.settledPage }.collect {
@@ -112,7 +112,8 @@ internal fun LoginPager(viewModel: LoginWithEmailPhoneViewModel) {
     ) { page ->
 
         when (page) {
-            0 -> PhoneTabScreen(viewModel)
+            //0 -> PhoneTabScreen(viewModel)
+            0 -> EmailUsernameTabScreen(viewModel)
             1 -> EmailUsernameTabScreen(viewModel)
         }
     }

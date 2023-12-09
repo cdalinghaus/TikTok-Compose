@@ -14,6 +14,7 @@
     <string name="messages_and_notification_will">Messages and notifications will appear here </string>
     <string name="sign_up">Sign up</string>
     <string name="comments">comments</string>
+    <string name="enter_username">Enter your username!!!111elf</string>
     <!--following tab-->
     <string name="trending_creators">Trending creators</string>
     <string name="follow_and_account_to_see">Follow an account to see their latest videos here.</string>
@@ -53,7 +54,7 @@
     <string name="email_username">Email / Username</string>
     <string name="phone_number">Phone number</string>
     <string name="enter_email_address_or_username">Enter email address or username</string>
-    <string name="next">Next</string>
+    <string name="next">NeXT, Inc</string>
     <string name="by_continuing_you_agree">By continuing, you agree to our </string>
     <string name="and_acknowledge_that_you_have">and acknowledge that you have read our</string>
     <string name="to_learn_how_we_collect">to learn how we collect, use, and share your data.</string>

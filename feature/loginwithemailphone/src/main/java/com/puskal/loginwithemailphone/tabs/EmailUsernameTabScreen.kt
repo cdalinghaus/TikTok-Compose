@@ -37,6 +37,8 @@ import com.puskal.theme.R
 @Composable
 fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
     val email by viewModel.email.collectAsState()
+    val username by viewModel.username.collectAsState() // Add state for username
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -49,12 +51,14 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
         ) {
             EmailField(email, viewModel)
             8.dp.Space()
+            UsernameField(username.first, viewModel) // Add this line for the username field
+            8.dp.Space()
             PrivacyPolicyText {}
             16.dp.Space()
             CustomButton(
                 buttonText = stringResource(id = R.string.next),
                 modifier = Modifier.fillMaxWidth(),
-                isEnabled = email.first.isNotEmpty()
+                isEnabled = email.first.isNotEmpty() && username.first.isNotEmpty() // Check if username is not empty
             ) {
 
             }
@@ -71,6 +75,53 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
 
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UsernameField(username: String, viewModel: LoginWithEmailPhoneViewModel) {
+    val focusRequester = remember { FocusRequester() }
+    TextField(
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester),
+        value = username,
+        textStyle = MaterialTheme.typography.labelLarge,
+        onValueChange = { newValue ->
+            // Update this to handle username change
+            viewModel.onTriggerEvent(LoginEmailPhoneEvent.OnChangeUsernameEntry(newValue))
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), // Use standard keyboard
+        singleLine = true,
+        colors = TextFieldDefaults.textFieldColors(
+            containerColor = Color.Transparent,
+            focusedIndicatorColor = SubTextColor,
+            unfocusedIndicatorColor = SubTextColor,
+        ),
+        placeholder = {
+            Text(
+                text = stringResource(id = R.string.enter_username), // Update this placeholder text
+                style = MaterialTheme.typography.labelLarge,
+                color = SubTextColor
+            )
+        },
+        trailingIcon = {
+            IconButton(onClick = {
+                // Update this to clear username
+                viewModel.onTriggerEvent(LoginEmailPhoneEvent.OnChangeUsernameEntry(""))
+            }) {
+                if (username.isNotEmpty()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_cancel),
+                        contentDescription = null
+                    )
+                }
+
+            }
+        }
+    )
+    // Add any specific LaunchedEffect if needed
+}
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -26,7 +26,8 @@ enum class LoginOption(
         title = R.string.use_phone_email_username,
         containerColor = PrimaryColor,
         contentColor = White
-    ),
+    )
+    /*
     FACEBOOK(
         icon = R.drawable.ic_facebook,
         title = R.string.continue_with_facebook,
@@ -38,5 +39,5 @@ enum class LoginOption(
     TWITTER(
         icon = R.drawable.ic_twitter,
         title = R.string.continue_with_twitter,
-    ),
+    ), */
 }
