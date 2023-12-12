@@ -58,39 +58,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-data class Author(
-    val id: Int,
-    val username: String,
-    val picture_url: String,
-    val follower_count: Int,
-    val play_count: Int,
-    val video_count: Int
-)
-
-data class Video(
-    val unique_id: String,
-    val slug: String,
-    val playable: Boolean,
-    val watermark_available: Boolean,
-    val plays: Int,
-    val like_count: Int,
-    val save_count: Int,
-    val prompt: String,
-    val description: String,
-    val derived: Boolean,
-    val url: String,
-    val desktop_url: String,
-    val download_url: String,
-    val boomerang_url: String,
-    val thumbnail_url: String,
-    val async_watchtime99: Double,
-    val async_watchtime95: Double,
-    val async_watchtime90: Double,
-    val author: Author,
-    val has_liked: Boolean,
-    val sfw_status: Int,
-    val created_at: String
-)
 
 data class FeedResponse(
     val stream_id: String,
