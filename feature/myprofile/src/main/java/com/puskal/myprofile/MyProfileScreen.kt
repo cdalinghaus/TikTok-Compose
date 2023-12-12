@@ -71,7 +71,8 @@ fun UnAuthorizedInboxScreen(onClickSignup: () -> Unit) {
         CustomButton(
             buttonText = stringResource(id = R.string.sign_up),
             modifier = Modifier.fillMaxWidth(0.66f)
-        ) {
+        )
+        {
             onClickSignup()
         }
     }

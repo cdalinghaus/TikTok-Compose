@@ -1,5 +1,7 @@
 package com.puskal.loginwithemailphone.tabs
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.puskal.composable.CustomButton
 import com.puskal.core.AppContract
@@ -29,15 +33,34 @@ import com.puskal.loginwithemailphone.LoginWithEmailPhoneViewModel
 import com.puskal.loginwithemailphone.suggestedDomainList
 import com.puskal.theme.*
 import com.puskal.theme.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.POST
 
 /**
  * Created by Puskal Khadka on 3/27/2023.
  */
 
+// Retrofit Interface
+interface AuthService {
+    @POST("api/login/")
+    suspend fun loginUser(@Body loginRequest: LoginRequest): Response<LoginResponse>
+}
+
+data class LoginRequest(val username: String, val password: String)
+data class LoginResponse(val token: String)
+
 @Composable
 fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
     val email by viewModel.email.collectAsState()
     val username by viewModel.username.collectAsState() // Add state for username
+    val password by viewModel.password.collectAsState()
 
     Column(
         modifier = Modifier
@@ -53,6 +76,8 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
             8.dp.Space()
             UsernameField(username.first, viewModel) // Add this line for the username field
             8.dp.Space()
+            PasswordField(password.first, viewModel)
+            8.dp.Space()
             PrivacyPolicyText {}
             16.dp.Space()
             CustomButton(
@@ -60,6 +85,36 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 isEnabled = email.first.isNotEmpty() && username.first.isNotEmpty() // Check if username is not empty
             ) {
+
+                val retrofit = Retrofit.Builder()
+                    .baseUrl("https://api.reemix.co/api/v2/")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                val authService = retrofit.create(AuthService::class.java)
+
+                // Authentication logic
+                val loginRequest = LoginRequest(username = username.first, password = password.first)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = authService.loginUser(loginRequest)
+                        if (response.isSuccessful) {
+                            // Handle successful authentication
+                            val loginResponse = response.body()!!
+                            // Save the token and navigate to the next screen or show success message
+                        } else {
+                            // Handle error - show error message to the user
+                            withContext(Dispatchers.Main) {
+                                Log.d("AUTH", "Authentication failed")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Handle exception - show error message to the user
+                        withContext(Dispatchers.Main) {
+                            Log.d("AUTH", "Error: ${e.message}")
+                        }
+                    }
+                }
+
 
             }
         }
@@ -75,6 +130,50 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
 
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PasswordField(password: String, viewModel: LoginWithEmailPhoneViewModel) {
+    val focusRequester = remember { FocusRequester() }
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
+    TextField(
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester),
+        value = password,
+        textStyle = MaterialTheme.typography.labelLarge,
+        onValueChange = { newValue ->
+            // Update this to handle password change
+            viewModel.onTriggerEvent(LoginEmailPhoneEvent.OnChangePasswordEntry(newValue))
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), // Use password keyboard
+        singleLine = true,
+        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        colors = TextFieldDefaults.textFieldColors(
+            containerColor = Color.Transparent,
+            focusedIndicatorColor = SubTextColor,
+            unfocusedIndicatorColor = SubTextColor,
+        ),
+        placeholder = {
+            Text(
+                text = "Enter your password (angry smiley)", // Update this placeholder text
+                style = MaterialTheme.typography.labelLarge,
+                color = SubTextColor
+            )
+        },
+        trailingIcon = {
+            IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                Icon(
+                    painter = if (isPasswordVisible) painterResource(id = R.drawable.ic_add) else painterResource(id = R.drawable.ic_add),
+                    contentDescription = null
+                )
+            }
+        }
+    )
+    // Add any specific LaunchedEffect if needed
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

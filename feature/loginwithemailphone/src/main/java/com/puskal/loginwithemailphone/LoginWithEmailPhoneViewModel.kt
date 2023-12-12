@@ -29,6 +29,9 @@ class LoginWithEmailPhoneViewModel @Inject constructor(
     private val _username = MutableStateFlow<Pair<String, String?>>(Pair("", null))
     val username = _username.asStateFlow()
 
+    private val _password = MutableStateFlow<Pair<String, String?>>(Pair("", null))
+    val password = _password.asStateFlow()
+
 
     override fun onTriggerEvent(event: LoginEmailPhoneEvent) {
         when (event) {
@@ -40,6 +43,11 @@ class LoginWithEmailPhoneViewModel @Inject constructor(
 
             is LoginEmailPhoneEvent.OnChangeUsernameEntry -> _username.value =
                 _username.value.copy(first = event.newValue)
+
+            is LoginEmailPhoneEvent.OnChangePasswordEntry -> _password.value =
+                _password.value.copy(first = event.newValue)
+
+
 
         }
     }
