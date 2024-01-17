@@ -1,5 +1,6 @@
 package com.puskal.commentlisting
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,6 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +34,9 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.puskal.composable.StatisticsApi
+
+
 
 import com.puskal.composable.downloadAndSaveVideo
 import com.puskal.core.extension.Space
@@ -42,12 +49,18 @@ import com.puskal.theme.SubTextColor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import okhttp3.Response as okhttpResponse
 
 
 /**
@@ -56,6 +69,41 @@ import retrofit2.http.Query
 
 
 
+interface CommentInterface {
+    @POST("videos/{video_id}/comments")
+    suspend fun createComment(
+        @Path("video_id") videoId: String,
+        @Body commentRequest: CommentRequest
+    ): Response<CommentResponse>
+}
+
+class AuthInterceptor(context: Context) : Interceptor {
+    private val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+
+    private fun getToken(): String? {
+        return sharedPreferences.getString("auth_token", null)
+    }
+
+    override fun intercept(chain: Interceptor.Chain): okhttpResponse {
+        val originalRequest = chain.request()
+        val token = getToken()
+
+        val newRequest = if (token != null) {
+            originalRequest.newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+        } else {
+            originalRequest
+        }
+
+        return chain.proceed(newRequest)
+    }
+}
+
+
+
+data class CommentRequest(val comment: String)
+data class CommentResponse(val placeholder: String)
 
 @Composable
 fun CommentListScreen(
@@ -105,7 +153,7 @@ fun CommentListScreen(
 
 
 
-        CommentUserField()
+        viewState?.let { CommentUserField(it) }
         }
     }
 
@@ -205,7 +253,9 @@ fun CommentItem(item: CommentList.Comment) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommentUserField() {
+fun CommentUserField(viewState: ViewState) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .shadow(elevation = (0.4).dp)
@@ -236,9 +286,9 @@ fun CommentUserField() {
                         CircleShape, color = GrayMainColor
                     )
             )
-
-            OutlinedTextField(value = "",
-                onValueChange = {},
+            var textValue by remember { mutableStateOf("") }
+            OutlinedTextField(value = textValue,
+                onValueChange = { textValue = it },
                 shape = RoundedCornerShape(36.dp),
                 placeholder = {
                     Text(text = stringResource(R.string.add_comment))
@@ -248,7 +298,7 @@ fun CommentUserField() {
                     unfocusedBorderColor = Color.Transparent
                 ),
                 modifier = Modifier.height(46.dp),
-                enabled=false,
+                enabled = true,
                 trailingIcon = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -268,6 +318,74 @@ fun CommentUserField() {
                 }
 
             )
+            val viewModel: CommentListViewModel = hiltViewModel()
+            Button(
+                onClick = {
+                    val commentText = textValue // Capture the text from the input field
+
+                    if (commentText.isNotEmpty()) {
+                        // Initialize Retrofit
+                        val okHttpClient = OkHttpClient.Builder()
+                            .addInterceptor(AuthInterceptor(context))
+                            .build()
+
+                        val retrofit = Retrofit.Builder()
+                            .baseUrl("https://api.reemix.co/api/v2/")
+                            .client(okHttpClient)
+                            .addConverterFactory(GsonConverterFactory.create())
+                            .build()
+
+                        val commentApi = retrofit.create(CommentInterface::class.java)
+
+
+                        // Create a coroutine to make the network request
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val response = commentApi.createComment(viewState.videoId, CommentRequest(commentText))
+
+                                if (response.isSuccessful) {
+                                    // Handle successful response
+                                    val commentResponse = response.body()
+                                    // Do something with the response, e.g., update UI
+                                    Log.d("ENDPOINT", "SUCCESS!")
+                                    textValue = ""
+                                    withContext(Dispatchers.Main) { // Switch to Main thread for UI operations
+                                        textValue = ""
+                                        viewModel.refreshComments() // Refresh comments using ViewModel
+                                    }
+                                } else {
+                                    // Handle error
+                                    // Log or show error message
+                                    Log.d("ENDPOINT", "NO SUCCESS! Status Code: ${response.code()}")
+                                    val errorBody = response.errorBody()?.string()
+                                    Log.d("ENDPOINT", "Error Body: $errorBody")
+
+                                }
+                            } catch (e: Exception) {
+                                // Handle exception
+                                // Log or show error message
+                            }
+                        }
+                    }
+                },
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(
+                        shape =
+                        CircleShape, color = GrayMainColor
+                    )
+            ) {
+                Icon(
+                    painter = painterResource(id = com.puskal.commentlisting.R.drawable.ic_send), // Replace with your send icon resource
+                    contentDescription = "Send",
+                    tint = Color.White,
+                )
+            }
+
+
+
+
         }
     }
 }

@@ -20,6 +20,7 @@ import com.puskal.data.model.VideoModel
 import com.puskal.theme.R
 import com.puskal.theme.SubTextColor
 
+
 /**
  * Created by Puskal Khadka on 3/22/2023.
  */
@@ -30,7 +31,7 @@ fun CreatorVideoPagerScreen(
     onClickNavIcon: () -> Unit,
     onclickComment: (videoId: String) -> Unit,
     onClickAudio: (VideoModel) -> Unit,
-    onClickUser: (userId: Long) -> Unit,
+    onClickUser: (userId: String) -> Unit,
     viewModel: CreatorVideoPagerViewModel = hiltViewModel()
 ) {
     val viewState by viewModel.viewState.collectAsState()

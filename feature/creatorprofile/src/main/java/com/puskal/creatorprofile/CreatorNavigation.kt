@@ -10,8 +10,8 @@ import com.puskal.core.DestinationRoute.CREATOR_PROFILE_ROUTE
 import com.puskal.core.DestinationRoute.FORMATTED_COMPLETE_CREATOR_VIDEO_ROUTE
 import com.puskal.core.DestinationRoute.PassedKey.USER_ID
 import com.puskal.core.DestinationRoute.PassedKey.VIDEO_INDEX
-import com.puskal.creatorprofile.screen.creatorprofile.CreatorProfileScreen
 import com.puskal.creatorprofile.screen.creatorvideo.CreatorVideoPagerScreen
+import com.puskal.creatorprofile.screen.creatorprofile.CreatorProfileScreen as CreatorProfileScreen1
 
 /**
  * Created by Puskal Khadka on 3/22/2023.
@@ -20,18 +20,18 @@ import com.puskal.creatorprofile.screen.creatorvideo.CreatorVideoPagerScreen
 fun NavGraphBuilder.creatorProfileNavGraph(navController: NavController) {
     composable(route = "$CREATOR_PROFILE_ROUTE/{$USER_ID}",
         arguments = listOf(
-            navArgument(USER_ID) { type = NavType.LongType }
+            navArgument(USER_ID) { type = NavType.StringType }
         )
     ) {
-        CreatorProfileScreen(
-            onClickNavIcon = { navController.navigateUp() },
+        CreatorProfileScreen1(
+            onClickNavIcon = { navController.navigate("home_screen_route") },
             navController = navController
         )
     }
 
     composable(route = FORMATTED_COMPLETE_CREATOR_VIDEO_ROUTE,
         arguments = listOf(
-            navArgument(USER_ID) { type = NavType.LongType },
+            navArgument(USER_ID) { type = NavType.StringType },
             navArgument(VIDEO_INDEX) { type = NavType.IntType }
         )
     ) {

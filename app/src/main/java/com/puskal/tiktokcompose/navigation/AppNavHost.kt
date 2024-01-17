@@ -11,6 +11,7 @@ import com.puskal.core.DestinationRoute.HOME_SCREEN_ROUTE
 import com.puskal.creatorprofile.creatorProfileNavGraph
 import com.puskal.friends.friendsNavGraph
 import com.puskal.home.homeNavGraph
+import com.puskal.create.createNavGraph
 import com.puskal.inbox.inboxNavGraph
 import com.puskal.loginwithemailphone.loginEmailPhoneNavGraph
 import com.puskal.myprofile.myProfileNavGraph
@@ -38,6 +39,7 @@ fun AppNavHost(
         authenticationNavGraph(navController)
         loginEmailPhoneNavGraph(navController)
         friendsNavGraph(navController)
+        createNavGraph(navController)
         myProfileNavGraph(navController)
         settingNavGraph(navController)
         cameraMediaNavGraph(navController)

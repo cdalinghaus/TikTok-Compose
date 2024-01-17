@@ -17,22 +17,26 @@ class CommentListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel<ViewState, CommentEvent>() {
 
-    init {
+    private val videoId = savedStateHandle.get<String>("videoId") ?: throw IllegalStateException("Video ID is required")
 
-        val videoId = savedStateHandle.get<String>("videoId") ?: throw IllegalStateException("Video ID is required")
-        getContentCreator(videoId)
+    init {
+        loadComments(videoId)
     }
 
-    private fun getContentCreator(videoId: String) {
+    fun loadComments(videoId: String) {
         viewModelScope.launch {
             getCommentOnVideoUseCase(videoId).collect {
-                updateState(ViewState(comments = it))
+                updateState(ViewState(comments = it, videoId = videoId))
             }
         }
     }
 
-    override fun onTriggerEvent(event: CommentEvent) {
+    // Call this function after successfully posting a comment
+    fun refreshComments() {
+        loadComments(videoId)
     }
 
-
+    override fun onTriggerEvent(event: CommentEvent) {
+        // Handle other events as needed
+    }
 }

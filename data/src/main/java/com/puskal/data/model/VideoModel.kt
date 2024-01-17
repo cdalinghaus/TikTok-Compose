@@ -11,6 +11,7 @@ data class VideoModel(
     val authorDetails: UserModel,
     val videoStats: VideoStats,
     var videoLink: String,
+    var thumbnailLink: String,
     val description: String,
     val currentViewerInteraction: ViewerInteraction = ViewerInteraction(),
     val createdAt: String = randomUploadDate(),

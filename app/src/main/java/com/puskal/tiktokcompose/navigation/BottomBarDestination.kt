@@ -6,6 +6,7 @@ import com.puskal.core.DestinationRoute.CAMERA_ROUTE
 import com.puskal.core.DestinationRoute.FRIENDS_ROUTE
 import com.puskal.core.DestinationRoute.HOME_SCREEN_ROUTE
 import com.puskal.core.DestinationRoute.INBOX_ROUTE
+import com.puskal.core.DestinationRoute.CREATE_NEW_VIDEO_ROUTE
 import com.puskal.core.DestinationRoute.MY_PROFILE_ROUTE
 import com.puskal.theme.R
 
@@ -36,7 +37,7 @@ enum class BottomBarDestination(
     ),
 
     ADD(
-        route = CAMERA_ROUTE,
+        route = CREATE_NEW_VIDEO_ROUTE,
         unFilledIcon = R.drawable.ic_add_dark,
         darkModeIcon = R.drawable.ic_add_light
     ),

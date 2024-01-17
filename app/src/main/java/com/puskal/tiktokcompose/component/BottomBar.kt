@@ -51,15 +51,33 @@ fun RowScope.BottomItem(
     else Pair(22.dp, 0.dp)
 
     var icon: Int = screen.unFilledIcon
+    var isButtonEnabled = true
+
+    val isButtonDisabled = screen == BottomBarDestination.FRIENDS ||
+            screen == BottomBarDestination.INBOX
+
+
     screen.apply {
-        if (this == BottomBarDestination.ADD) {
-            if (isDarkTheme) darkModeIcon?.let { icon = it }
-        } else {
-            if (isCurrentBottomItemSelected) {
-                filledIcon?.let { icon = it }
+        when(this) {
+            BottomBarDestination.ADD -> {
+                if (isDarkTheme) darkModeIcon?.let { icon = it }
+            }
+            BottomBarDestination.FRIENDS, BottomBarDestination.INBOX -> {
+                isButtonEnabled = false // Disable the button for these routes
+            }
+            else -> {
+                if (isCurrentBottomItemSelected) {
+                    filledIcon?.let { icon = it }
+                }
             }
         }
     }
+
+    // Adjust icon and text color when disabled
+    val iconTint = if (!isButtonEnabled) Color.DarkGray else Color.Unspecified
+    val textColorAlpha = if (!isButtonEnabled) 0.4f else if (isCurrentBottomItemSelected) 1f else 0.7f
+
+
     NavigationBarItem(
         modifier = Modifier.offset(y = -BottomBarItemVerticalOffset),
         label = {
@@ -69,7 +87,7 @@ fun RowScope.BottomItem(
                     text = stringResource(id = screen.title),
                     style = MaterialTheme.typography.labelSmall,
                     softWrap = false,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isCurrentBottomItemSelected) 1f else 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = textColorAlpha)
                 )
             }
         },
@@ -81,7 +99,7 @@ fun RowScope.BottomItem(
                     .padding(bottom = 9.dp)
                     .size(iconSize)
                     .offset(y = offsetY),
-                tint = Color.Unspecified,
+                tint = iconTint,
             )
         },
         colors = NavigationBarItemDefaults.colors(
@@ -91,9 +109,11 @@ fun RowScope.BottomItem(
         ),
         selected = isCurrentBottomItemSelected,
         onClick = {
-            screen.route.let {
-                navController.navigate(it){
-                    launchSingleTop=true
+            if (!isButtonDisabled) {
+                screen.route.let {
+                    navController.navigate(it) {
+                        launchSingleTop = true
+                    }
                 }
             }
         }

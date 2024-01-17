@@ -1,9 +1,15 @@
 package com.puskal.loginwithemailphone
 
+import android.util.Log
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.viewModelScope
 import com.puskal.core.base.BaseViewModel
+import com.puskal.loginwithemailphone.tabs.AuthService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -46,9 +52,27 @@ class LoginWithEmailPhoneViewModel @Inject constructor(
 
             is LoginEmailPhoneEvent.OnChangePasswordEntry -> _password.value =
                 _password.value.copy(first = event.newValue)
+        }
 
 
+    }
 
+    val _isUserExists = mutableStateOf(true)
+    val isUserExists: State<Boolean> = _isUserExists
+
+    fun checkUserExists(username: String, authService: AuthService) {
+        viewModelScope.launch {
+            try {
+                val response = authService.checkUserExists(username)
+                _isUserExists.value = false
+                //Log.d("AUTH", "RESPONSE CODE" + response.code().toString())
+
+                //_isUserExists.value = response.isSuccessful && response.body() == true
+                //Log.d("AUTH", "USER CHECK" + _isUserExists.toString())
+            } catch (e: Exception) {
+                // Handle exception
+                _isUserExists.value = true
+            }
         }
     }
 

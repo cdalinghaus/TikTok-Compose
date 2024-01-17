@@ -24,7 +24,7 @@ class CreatorVideoPagerViewModel
     private val getCreatorProfileUseCase: GetCreatorProfileUseCase,
     private val getCreatorPublicVideoUseCase: GetCreatorPublicVideoUseCase
 ) : BaseViewModel<ViewState, CreatorVideoEvent>() {
-    val userId: Long? = savedStateHandle[USER_ID]
+    val userId: String? = savedStateHandle[USER_ID]
     val videoIndex: Int? = savedStateHandle[VIDEO_INDEX]
 
     private val _videosList = MutableStateFlow<List<VideoModel>>(arrayListOf())
@@ -40,7 +40,7 @@ class CreatorVideoPagerViewModel
     }
 
 
-    private fun fetchCreatorVideo(id: Long) {
+    private fun fetchCreatorVideo(id: String) {
         viewModelScope.launch {
             getCreatorPublicVideoUseCase(id).collect {
                 updateState(ViewState(creatorVideosList = it))

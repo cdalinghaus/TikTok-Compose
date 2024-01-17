@@ -8,7 +8,8 @@ import com.puskal.data.model.CommentList
 data class ViewState(
     val isLoading: Boolean? = null,
     val error: String? = null,
-    val comments: CommentList? = null
+    val comments: CommentList? = null,
+    val videoId: String
 )
 
 sealed class CommentEvent {

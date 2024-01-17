@@ -11,6 +11,8 @@ object DestinationRoute {
     const val COMMENT_BOTTOM_SHEET_ROUTE = "comment_bottom_sheet_route"
     const val CREATOR_PROFILE_ROUTE = "creator_profile_route"
 
+    const val CREATE_NEW_VIDEO_ROUTE = "create_new_video_route"
+
     const val CREATOR_VIDEO_ROUTE = "creator_video_route"
     const val FORMATTED_COMPLETE_CREATOR_VIDEO_ROUTE =
         "$CREATOR_VIDEO_ROUTE/{$USER_ID}/{$VIDEO_INDEX}"

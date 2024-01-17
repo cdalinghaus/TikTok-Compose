@@ -4,6 +4,7 @@ plugins {
 
 
 dependencies {
+    implementation(project(mapOf("path" to ":feature:loginwithemailphone")))
     COMMON_THEME
     COMMON_COMPOSABLE
     DOMAIN

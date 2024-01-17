@@ -35,11 +35,9 @@ import com.puskal.theme.*
 import com.puskal.theme.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.isActive
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.create
 import retrofit2.http.GET
 import retrofit2.http.Query
 import retrofit2.Response
@@ -47,13 +45,17 @@ import retrofit2.Response
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 import android.content.Context
 import android.os.Environment
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import retrofit2.http.POST
+import retrofit2.http.Path
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -118,7 +120,7 @@ fun TikTokVerticalVideoPager(
     onClickLike: (videoId: String, likeStatus: Boolean) -> Unit,
     onclickFavourite: (videoId: String) -> Unit,
     onClickAudio: (VideoModel) -> Unit,
-    onClickUser: (userId: Long) -> Unit,
+    onClickUser: (userId: String) -> Unit,
     onClickFavourite: (isFav: Boolean) -> Unit = {},
     onClickShare: (() -> Unit)? = null
 ) {
@@ -153,10 +155,16 @@ fun TikTokVerticalVideoPager(
 
                 //Log.d("Page change", "List length is now (after the code $length")
 
+                val okHttpClient = OkHttpClient.Builder()
+                    .addInterceptor(AuthInterceptor(context))
+                    .build()
+
                 val retrofit = Retrofit.Builder()
                     .baseUrl("https://api.reemix.co/api/v2/")
                     .addConverterFactory(GsonConverterFactory.create())
+                    .client(okHttpClient) // Set the OkHttpClient as the client for Retrofit
                     .build()
+
 
                 val statisticsApi = retrofit.create(StatisticsApi::class.java)
 
@@ -265,7 +273,7 @@ fun TikTokVerticalVideoPager(
                             .fillMaxWidth()
                             .weight(1f),
                         item = mutable_videos[it],
-                        showUploadDate=showUploadDate,
+                        showUploadDate = showUploadDate,
                         onClickAudio = onClickAudio,
                         onClickUser = onClickUser,
                     )
@@ -332,7 +340,42 @@ fun TikTokVerticalVideoPager(
     }
 
 }
+data class LikeResponse(val placeholder: String)
+interface CommentInterface {
+    @POST("videos/{video_id}/like")
+    suspend fun like(
+        @Path("video_id") videoId: String
+    ): Response<LikeResponse>
 
+    @POST("videos/{video_id}/unlike")
+    suspend fun unlike(
+        @Path("video_id") videoId: String
+    ): Response<LikeResponse>
+}
+
+class AuthInterceptor(context: Context) : Interceptor {
+    private val sharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+
+    private fun getToken(): String? {
+        return sharedPreferences.getString("auth_token", null)
+    }
+
+    override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
+        val originalRequest = chain.request()
+        val token = getToken()
+        Log.d("AUTH TOKEN!!!", token.toString())
+
+        val newRequest = if (token != null) {
+            originalRequest.newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+        } else {
+            originalRequest
+        }
+
+        return chain.proceed(newRequest)
+    }
+}
 
 @Composable
 fun SideItems(
@@ -340,7 +383,7 @@ fun SideItems(
     item: VideoModel,
     doubleTabState: Triple<Offset, Boolean, Float>,
     onclickComment: (videoId: String) -> Unit,
-    onClickUser: (userId: Long) -> Unit,
+    onClickUser: (userId: String) -> Unit,
     onClickShare: (() -> Unit)? = null,
     onClickFavourite: (isFav: Boolean) -> Unit
 ) {
@@ -357,7 +400,7 @@ fun SideItems(
                 )
                 .clip(shape = CircleShape)
                 .clickable {
-                    onClickUser.invoke(item.authorDetails.userId)
+                    onClickUser.invoke(item.authorDetails.uniqueUserName)
                 },
             contentScale = ContentScale.Crop
         )
@@ -375,21 +418,63 @@ fun SideItems(
 
         12.dp.Space()
 
-        var isLiked by remember {
-            mutableStateOf(item.currentViewerInteraction.isLikedByYou)
-        }
+        // Usage in parent composable
+        var isLiked by remember { mutableStateOf(item.currentViewerInteraction.isLikedByYou) }
+        var likeCount by remember { mutableStateOf(item.videoStats.like) }
 
         LaunchedEffect(key1 = doubleTabState) {
             if (doubleTabState.first != Offset.Unspecified && doubleTabState.second) {
                 isLiked = doubleTabState.second
             }
         }
+
+
+
         LikeIconButton(isLiked = isLiked,
-            likeCount = "123",
-            onLikedClicked = {
-                isLiked = it
-                item.currentViewerInteraction.isLikedByYou = it
-            })
+            likeCount = likeCount.toInt(),
+            onLikedClicked = { liked ->
+                isLiked = !isLiked
+                likeCount = if (liked) likeCount + 1 else likeCount - 1
+
+                // Determine the endpoint based on the like status
+                val endpoint = if (liked) "like" else "unlike"
+                val url = "https://api.reemix.co/api/v2/videos/${item.videoId}/$endpoint"
+
+                // Create a coroutine to make the network request
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // Prepare the request
+                        val request = Request.Builder()
+                            .url(url)
+                            .post(FormBody.Builder().build()) // Assuming a POST request
+                            .build()
+
+                        val okHttpClient = OkHttpClient.Builder()
+                            .addInterceptor(AuthInterceptor(context))
+                            .build()
+
+                        // Execute the request
+                        val response = okHttpClient.newCall(request).execute()
+
+                        if (response.isSuccessful) {
+                            // Handle successful response
+                            Log.d("LIKED_ENDPOINT", "SUCCESS! Status Code: ${response.code}")
+
+                        } else {
+                            // Handle error
+                            Log.d("LIKED_ENDPOINT", "NO SUCCESS! Status Code: ${response.code}")
+                            val errorBody = response.body?.string()
+                            Log.d("LIKED_ENDPOINT", "Error Body: $errorBody")
+                        }
+                    } catch (e: Exception) {
+                        // Handle exception
+                        Log.e("LIKED_ENDPOINT", "Exception: ${e.message}")
+                    }
+                }
+            }
+        )
+        16.dp.Space()
+
 
 
         Icon(painter = painterResource(id = R.drawable.ic_comment),
@@ -401,24 +486,64 @@ fun SideItems(
                     onclickComment(item.videoId)
                 })
         Text(
-            text = "this is the text",
+            text = item.videoStats.comment.toString(),
             style = MaterialTheme.typography.labelMedium
         )
         16.dp.Space()
 
+        var isSaved by remember {
+            mutableStateOf(item.currentViewerInteraction.isAddedToFavourite)
+        }
+
+        var saveCount by remember {
+            mutableStateOf(item.videoStats.favourite)
+        }
+
+        SaveIconButton(isSaved = isSaved,
+            saveCount = saveCount.toString(),
+            onSavedClicked = { saved ->
+                isSaved = !isSaved
+                saveCount = if (saved) likeCount + 1 else likeCount - 1
+
+                // Determine the endpoint based on the save status
+                val endpoint = if (saved) "save" else "unsave"
+                val url = "https://api.reemix.co/api/v2/videos/${item.videoId}/$endpoint"
+
+                // Create a coroutine to make the network request
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // Prepare the request
+                        val request = Request.Builder()
+                            .url(url)
+                            .post(FormBody.Builder().build()) // Assuming a POST request
+                            .build()
+
+                        val okHttpClient = OkHttpClient.Builder()
+                            .addInterceptor(AuthInterceptor(context))
+                            .build()
+
+                        // Execute the request
+                        val response = okHttpClient.newCall(request).execute()
+
+                        if (response.isSuccessful) {
+                            // Handle successful response
+                            Log.d("SAVED_ENDPOINT", "SUCCESS! Status Code: ${response.code}")
+                        } else {
+                            // Handle error
+                            Log.d("SAVED_ENDPOINT", "NO SUCCESS! Status Code: ${response.code}")
+                            val errorBody = response.body?.string()
+                            Log.d("SAVED_ENDPOINT", "Error Body: $errorBody")
+                        }
+                    } catch (e: Exception) {
+                        // Handle exception
+                        Log.e("SAVED_ENDPOINT", "Exception: ${e.message}")
+                    }
+                }
+            }
+        )
 
 
-        Icon(
-            painter = painterResource(id = R.drawable.ic_bookmark),
-            contentDescription = null,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(33.dp)
-        )
-        Text(
-            text = "0",
-            style = MaterialTheme.typography.labelMedium
-        )
-        14.dp.Space()
+
 
         Icon(
             painter = painterResource(id = R.drawable.ic_share),
@@ -446,25 +571,16 @@ fun SideItems(
 
 @Composable
 fun LikeIconButton(
-    isLiked: Boolean, likeCount: String, onLikedClicked: (Boolean) -> Unit
+    isLiked: Boolean,
+    likeCount: Int,
+    onLikedClicked: (Boolean) -> Unit
 ) {
-
-    val maxSize = 38.dp
-    val iconSize by animateDpAsState(targetValue = if (isLiked) 33.dp else 32.dp,
-        animationSpec = keyframes {
-            durationMillis = 400
-            24.dp.at(50)
-            maxSize.at(190)
-            26.dp.at(330)
-            32.dp.at(400).with(FastOutLinearInEasing)
-        })
+    val iconSize = 32.dp // Adjust size as needed
 
     Box(
         modifier = Modifier
-            .size(maxSize)
-            .clickable(interactionSource = MutableInteractionSource(), indication = null) {
-                onLikedClicked(!isLiked)
-            }, contentAlignment = Alignment.Center
+            .clickable { onLikedClicked(!isLiked) },
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_heart),
@@ -474,9 +590,51 @@ fun LikeIconButton(
         )
     }
 
-    Text(text = likeCount, style = MaterialTheme.typography.labelMedium)
+    Text(text = likeCount.toString(), style = MaterialTheme.typography.labelMedium)
+}
+
+@Composable
+fun SaveIconButton(
+    isSaved: Boolean,
+    saveCount: String,
+    onSavedClicked: (Boolean) -> Unit
+) {
+    var saved by remember { mutableStateOf(isSaved) }
+
+    val maxSize = 38.dp
+    val iconSize by animateDpAsState(
+        targetValue = if (saved) 33.dp else 32.dp,
+        animationSpec = keyframes {
+            durationMillis = 400
+            24.dp.at(50)
+            maxSize.at(190)
+            26.dp.at(330)
+            32.dp.at(400).with(FastOutLinearInEasing)
+        }
+    )
+
+    Box(
+        modifier = Modifier
+            .size(maxSize)
+            .clickable(interactionSource = MutableInteractionSource(), indication = null) {
+                saved = !saved
+                onSavedClicked(saved)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(id = if (saved) R.drawable.ic_bookmark else R.drawable.ic_bookmark),
+            contentDescription = "Save",
+            tint = if (saved) MaterialTheme.colorScheme.primary else Color.White,
+            modifier = Modifier.size(iconSize)
+        )
+    }
+
+    Text(text = saveCount, style = MaterialTheme.typography.labelMedium)
     16.dp.Space()
 }
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -485,16 +643,16 @@ fun FooterUi(
     item: VideoModel,
     showUploadDate: Boolean,
     onClickAudio: (VideoModel) -> Unit,
-    onClickUser: (userId: Long) -> Unit,
+    onClickUser: (userId: String) -> Unit,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.Bottom) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
-            onClickUser(item.authorDetails.userId)
+            onClickUser(item.authorDetails.uniqueUserName)
         }) {
             Text(
                 text = item.authorDetails.fullName, style = MaterialTheme.typography.bodyMedium
             )
-            if (showUploadDate) {
+            if (true) {
                 Text(
                     text = " . ${item.createdAt} ago",
                     style = MaterialTheme.typography.labelLarge,
@@ -506,8 +664,11 @@ fun FooterUi(
         Text(
             text = item.description,
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(0.85f)
+            modifier = Modifier.fillMaxWidth(0.85f),
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
         )
+
         10.dp.Space()
         val audioInfo: String = item.audioModel?.run {
             "Original sound - ${audioAuthor.uniqueUserName} - ${audioAuthor.fullName}"

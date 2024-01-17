@@ -84,11 +84,8 @@ fun Context.VideoGridItem(item: VideoModel, index: Int, onClickVideo: (VideoMode
                 onClickVideo(item, index)
             }
     ) {
-        var thumbnail: Bitmap? by remember {
-            mutableStateOf(null)
-        }
         AsyncImage(
-            model = thumbnail,
+            model = item.thumbnailLink, // Use the thumbnail URL from VideoModel
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
@@ -107,15 +104,17 @@ fun Context.VideoGridItem(item: VideoModel, index: Int, onClickVideo: (VideoMode
             contentScale = ContentScale.Crop
         )
         LaunchedEffect(key1 = true) {
+            /*
             withContext(Dispatchers.IO) {
                 val bitmap = FileUtils.extractThumbnail(
-                    assets.openFd("videos/${item.videoLink}"), 1
+                    assets.openFd("${item.videoLink}"), 1
                 )
                 withContext(Dispatchers.Main) {
                     thumbnail = bitmap
 
                 }
             }
+            */
         }
 
         Row(
@@ -132,7 +131,7 @@ fun Context.VideoGridItem(item: VideoModel, index: Int, onClickVideo: (VideoMode
                 tint = Color.Unspecified
             )
             Text(
-                text = item.videoStats.formattedViewsCount,
+                text = item.videoStats.views.toString(),
                 color = Color.White,
                 style = MaterialTheme.typography.labelMedium
             )

@@ -44,7 +44,7 @@ fun FollowingScreen(
     ) {
         80.dp.Space()
         Text(
-            text = stringResource(id = R.string.trending_creators),
+            text = "Coming Soon!",
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
@@ -52,7 +52,7 @@ fun FollowingScreen(
         )
         10.dp.Space()
         Text(
-            text = stringResource(id = R.string.follow_and_account_to_see),
+            text = "You will soon be able to view your favourite AI creators here",
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
             modifier = Modifier
