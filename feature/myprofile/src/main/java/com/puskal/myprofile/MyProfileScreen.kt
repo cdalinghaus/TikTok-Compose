@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.puskal.composable.CustomButton
@@ -94,12 +95,20 @@ fun UnAuthorizedInboxScreen(onClickSignup: () -> Unit, navController: NavControl
             contentDescription = null,
             modifier = Modifier.size(68.dp)
         )
-        Text(
-            text = stringResource(id = R.string.sign_up_for_an_account),
-            color = SubTextColor
-        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxWidth(0.66F)
+        ) {
+            Text(
+                text = stringResource(id = R.string.sign_up_for_an_account),
+                color = SubTextColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(0.66.dp)
+            )
+        }
+
         CustomButton(
-            buttonText = stringResource(id = R.string.sign_up),
+            buttonText = stringResource(id =  R.string.sign_up),
             modifier = Modifier.fillMaxWidth(0.66f)
         )
         {

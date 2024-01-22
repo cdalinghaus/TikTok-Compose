@@ -1,13 +1,19 @@
 package com.puskal.creatorprofile.screen.creatorprofile
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,11 +25,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.google.gson.Gson
+import com.puskal.composable.AuthInterceptor
 import com.puskal.composable.TopBar
 import com.puskal.core.AppContract.Type.INSTAGRAM
 import com.puskal.core.AppContract.Type.YOUTUBE
+import com.puskal.core.DestinationRoute
 import com.puskal.core.DestinationRoute.CREATOR_VIDEO_ROUTE
 import com.puskal.core.utils.IntentUtils.redirectToApp
 import com.puskal.creatorprofile.component.*
@@ -31,6 +41,46 @@ import com.puskal.data.model.SocialMediaType
 import com.puskal.data.model.UserModel
 import com.puskal.theme.*
 import com.puskal.theme.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+
+object SharedPreferencesManager {
+    private const val PREFS_NAME = "MyAppPrefs"
+    private const val TOKEN_KEY = "auth_token"
+    private const val USER_KEY = "auth_user"
+
+    fun saveToken(context: Context, token: String) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString(TOKEN_KEY, token).apply()
+    }
+
+    fun getToken(context: Context): String? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return sharedPrefs.getString(TOKEN_KEY, null)
+    }
+
+    fun saveUser(context: Context, user: UserModel) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = Gson().toJson(user)
+        sharedPrefs.edit().putString(USER_KEY, userJson).apply()
+    }
+
+    fun getUser(context: Context): UserModel? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = sharedPrefs.getString(USER_KEY, null)
+        return userJson?.let { Gson().fromJson(it, UserModel::class.java) }
+    }
+
+    fun clear(context: Context) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs.edit().remove(TOKEN_KEY).remove(USER_KEY).apply()
+    }
+}
 
 /**
  * Created by Puskal Khadka on 3/22/2023.
@@ -44,13 +94,18 @@ fun CreatorProfileScreen(
     viewModel: CreatorProfileViewModel = hiltViewModel()
 ) {
     val viewState by viewModel.viewState.collectAsState()
+    val creatorProfileState by viewModel.creatorProfile.collectAsState()
+
+
+    //val viewState: MutableStateFlow<UserModel?> = MutableStateFlow(null)
     val scrollState = rememberScrollState()
+
 
     Scaffold(
         topBar = {
             TopBar(
                 onClickNavIcon = onClickNavIcon,
-                title = viewState?.creatorProfile?.fullName ?: "",
+                title = creatorProfileState?.fullName ?: "",
                 actions = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_more_vert),
@@ -71,7 +126,7 @@ fun CreatorProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ProfileDetails(viewState?.creatorProfile)
+                ProfileDetails(creatorProfileState, navController, viewModel)
                 VideoListingPager(scrollState = scrollState, height = height, viewModel,
                     onClickVideo = { video, index ->
                         navController.navigate("$CREATOR_VIDEO_ROUTE/${viewModel.userId}/$index")
@@ -84,8 +139,9 @@ fun CreatorProfileScreen(
 }
 
 @Composable
-fun ColumnScope.ProfileDetails(creatorProfile: UserModel?) {
+fun ColumnScope.ProfileDetails(creatorProfile: UserModel?, navController: NavController, viewModel: CreatorProfileViewModel) {
     val context = LocalContext.current
+
     AsyncImage(
         model = creatorProfile?.profilePic,
         contentDescription = null,
@@ -204,12 +260,50 @@ fun ColumnScope.ProfileDetails(creatorProfile: UserModel?) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Button(
-            onClick = { }, modifier = Modifier
+            onClick = {
+                viewModel.toggleFollow(context)
+            }, modifier = Modifier
                 .width(158.dp)
                 .height(42.dp), shape = RoundedCornerShape(2.dp)
         ) {
-            Text(text = stringResource(id = R.string.follow))
+            Log.d("profilestate", creatorProfile.toString())
+            if(creatorProfile != null) {
+                if(creatorProfile.isFollowed) {
+                    Text(text = "UNFOLLOW")
+                } else {
+                    Text(text = stringResource(id = R.string.follow))
+                }
+            } else {
+                Text(text = "Loading")
+            }
+
         }
+
+        //val context = LocalContext.current
+
+        var authToken by remember { mutableStateOf<String?>(null) }
+        var user by remember { mutableStateOf<UserModel?>(null) }
+
+        authToken = SharedPreferencesManager.getToken(context)
+        user = SharedPreferencesManager.getUser(context)
+
+        // Show the logout model if this user is currently logged in
+        if (user?.userId == creatorProfile?.userId) {
+            Button(
+                onClick = {
+                    SharedPreferencesManager.clear(context)
+                    navController.navigate("HOME_SCREEN_ROUTE")
+
+                }, modifier = Modifier
+                    .width(158.dp)
+                    .height(42.dp), shape = RoundedCornerShape(2.dp)
+            ) {
+                Text(text = "Logout")
+            }
+        }
+
+
+
         creatorProfile?.pinSocialMedia?.let {
             Box(
                 modifier = Modifier
@@ -251,9 +345,12 @@ fun ColumnScope.ProfileDetails(creatorProfile: UserModel?) {
         }
     }
 
-    Text(
-        text = creatorProfile?.bio ?: stringResource(id = R.string.no_bio_yet),
-    )
+    if (creatorProfile != null) {
+        Text(
+            //text = creatorProfile.isFollowed.toString()
+            text = creatorProfile?.bio ?: stringResource(id = R.string.no_bio_yet),
+        )
+    }
 
 
 }

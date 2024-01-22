@@ -29,9 +29,11 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.navigation.NavController
 import com.google.gson.Gson
 import com.puskal.composable.CustomButton
 import com.puskal.core.AppContract
+import com.puskal.core.DestinationRoute
 import com.puskal.core.extension.Space
 import com.puskal.data.model.UserModel
 import com.puskal.loginwithemailphone.LoginEmailPhoneEvent
@@ -66,7 +68,7 @@ interface AuthService {
     @POST("auth/register")
     suspend fun registerUser(@Body registerRequest: RegisterRequest): Response<LoginResponse>
 
-    @GET("users/{username}")
+    @GET("creators/{username}")
     suspend fun checkUserExists(@Path("username") username: String): Response<Boolean>
 }
 data class RegisterRequest(val username: String, val password: String, val email: String)
@@ -109,7 +111,7 @@ val authService = retrofit.create(AuthService::class.java)
 
 
 @Composable
-fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
+fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel, navController: NavController) {
     val email by viewModel.email.collectAsState()
     val username by viewModel.username.collectAsState() // Add state for username
     val password by viewModel.password.collectAsState()
@@ -141,8 +143,9 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
 
             PrivacyPolicyText {}
             16.dp.Space()
+            val buttonText = if (viewModel.isUserExists.value) "Log in" else "Sign up"
             CustomButton(
-                buttonText = stringResource(id = R.string.next),
+                buttonText = buttonText,
                 modifier = Modifier.fillMaxWidth(),
                 isEnabled = password.first.isNotEmpty() && username.first.isNotEmpty() && (email.first.isNotEmpty() || viewModel.isUserExists.value) // Check if username is not empty
             )
@@ -170,7 +173,11 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
                                 withContext(Dispatchers.Main) {
                                     SharedPreferencesManager.saveToken(context, loginResponse.token)
                                     SharedPreferencesManager.saveUser(context, loginResponse.user)
+                                    val uniqueUserName = loginResponse.user.uniqueUserName
+                                    navController.navigate("${DestinationRoute.CREATOR_PROFILE_ROUTE}/$uniqueUserName")
                                 }
+
+
                             } else {
                                 // Handle error - log the error reason
                                 val errorMessage = response.errorBody()?.string() ?: "Unknown error"
@@ -194,7 +201,8 @@ fun EmailUsernameTabScreen(viewModel: LoginWithEmailPhoneViewModel) {
                                 withContext(Dispatchers.Main) {
                                     SharedPreferencesManager.saveToken(context, loginResponse.token)
                                     SharedPreferencesManager.saveUser(context, loginResponse.user)
-
+                                    val uniqueUserName = loginResponse.user.uniqueUserName
+                                    navController.navigate("${DestinationRoute.CREATOR_PROFILE_ROUTE}/$uniqueUserName")
                                 }
 
                             } else {
@@ -258,7 +266,7 @@ fun PasswordField(password: String, viewModel: LoginWithEmailPhoneViewModel) {
         ),
         placeholder = {
             Text(
-                text = "Enter your password (angry smiley)", // Update this placeholder text
+                text = "Enter your password", // Update this placeholder text
                 style = MaterialTheme.typography.labelLarge,
                 color = SubTextColor
             )

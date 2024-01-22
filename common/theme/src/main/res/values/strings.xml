@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TikTok Compose</string>
+    <string name="app_name">Reemix Krass</string>
 
     <string name="home">Home</string>
     <string name="friends">Friends</string>
@@ -12,14 +12,15 @@
     <string name="hide">hide</string>
 
     <string name="messages_and_notification_will">Messages and notifications will appear here </string>
-    <string name="sign_up">Sign up</string>
+    <string name="sign_up">Sign up / Sign in</string>
     <string name="sign_in">Sign in</string>
     <string name="comments">comments</string>
-    <string name="enter_username">Enter your username!!!111elf</string>
+    <string name="enter_username">Enter your username</string>
     <!--following tab-->
     <string name="trending_creators">Trending creators</string>
     <string name="follow_and_account_to_see">Follow an account to see their latest videos here.</string>
     <string name="follow">Follow</string>
+    <string name="unfollow">Unfollow</string>
     <string name="add_comment">Add comment…</string>
 
     <string name="followers">Followers</string>
@@ -59,10 +60,10 @@
     <string name="by_continuing_you_agree">By continuing, you agree to our </string>
     <string name="and_acknowledge_that_you_have">and acknowledge that you have read our</string>
     <string name="to_learn_how_we_collect">to learn how we collect, use, and share your data.</string>
-    <string name="and_confirm_that_you_have_read">and confirm that you have read TikTok\'s</string>
+    <string name="and_confirm_that_you_have_read">and confirm that you have read reemix.co\'s</string>
 
     <!-- my profile -->
-    <string name="sign_up_for_an_account">Sign up for and account</string>
+    <string name="sign_up_for_an_account">Enjoy faster video generation and a great community with an account!</string>
 
     <!-- settings -->
     <string name="settings_and_privacy">Settings and privacy</string>

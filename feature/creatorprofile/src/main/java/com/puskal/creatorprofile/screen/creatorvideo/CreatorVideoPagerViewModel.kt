@@ -1,5 +1,6 @@
 package com.puskal.creatorprofile.screen.creatorvideo
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.puskal.core.DestinationRoute.PassedKey.USER_ID
@@ -9,6 +10,7 @@ import com.puskal.data.model.VideoModel
 import com.puskal.domain.creatorprofile.GetCreatorProfileUseCase
 import com.puskal.domain.creatorprofile.GetCreatorPublicVideoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +24,8 @@ class CreatorVideoPagerViewModel
 @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val getCreatorProfileUseCase: GetCreatorProfileUseCase,
-    private val getCreatorPublicVideoUseCase: GetCreatorPublicVideoUseCase
+    private val getCreatorPublicVideoUseCase: GetCreatorPublicVideoUseCase,
+    @ApplicationContext private val context: Context
 ) : BaseViewModel<ViewState, CreatorVideoEvent>() {
     val userId: String? = savedStateHandle[USER_ID]
     val videoIndex: Int? = savedStateHandle[VIDEO_INDEX]
@@ -35,14 +38,14 @@ class CreatorVideoPagerViewModel
 
     init {
         userId?.let {
-            fetchCreatorVideo(it)
+            fetchCreatorVideo(it, context)
         }
     }
 
 
-    private fun fetchCreatorVideo(id: String) {
+    private fun fetchCreatorVideo(id: String, context: Context) {
         viewModelScope.launch {
-            getCreatorPublicVideoUseCase(id).collect {
+            getCreatorPublicVideoUseCase(id, this@CreatorVideoPagerViewModel.context).collect {
                 updateState(ViewState(creatorVideosList = it))
             }
         }

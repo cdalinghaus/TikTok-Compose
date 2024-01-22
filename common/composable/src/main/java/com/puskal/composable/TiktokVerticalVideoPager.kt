@@ -372,7 +372,6 @@ class AuthInterceptor(context: Context) : Interceptor {
         } else {
             originalRequest
         }
-
         return chain.proceed(newRequest)
     }
 }

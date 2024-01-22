@@ -12,14 +12,14 @@ object VideoDataSource {
 
     // Dummy data for demonstration
     private val dummyVideos = listOf(
-        VideoModel(authorDetails = UserModel(), description = "TEasd", videoId="a", thumbnailLink = "", videoLink = "", videoStats= VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123)),
-        VideoModel(authorDetails = UserModel(), description = "TEasd", videoId="a", thumbnailLink = "", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123)),
+        VideoModel(authorDetails = UserModel(likes=123), description = "TEasd", videoId="a", thumbnailLink = "", videoLink = "", videoStats= VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123)),
+        VideoModel(authorDetails = UserModel(likes=123), description = "TEasd", videoId="a", thumbnailLink = "", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123)),
         // Add more dummy VideoModel instances as needed
     )
 
     private val dummyUserVideos = mapOf(
-        1L to listOf(VideoModel(authorDetails = UserModel(), description = "TEasd", thumbnailLink = "", videoId="a", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123))),
-        2L to listOf(VideoModel(authorDetails = UserModel(), description = "TEasd", thumbnailLink = "", videoId="a", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123))),
+        1L to listOf(VideoModel(authorDetails = UserModel(likes=123), description = "TEasd", thumbnailLink = "", videoId="a", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123))),
+        2L to listOf(VideoModel(authorDetails = UserModel(likes=123), description = "TEasd", thumbnailLink = "", videoId="a", videoLink = "", videoStats=VideoModel.VideoStats(comment=1, like=3, share = 3, favourite = 123))),
         // Map user IDs to their respective video lists
     )
 

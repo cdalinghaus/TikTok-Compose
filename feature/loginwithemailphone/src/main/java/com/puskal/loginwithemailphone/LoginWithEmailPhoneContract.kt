@@ -3,7 +3,7 @@ package com.puskal.loginwithemailphone
 import androidx.annotation.StringRes
 import com.puskal.theme.R
 
-/**
+/**EmailUsernameTabScreen
  * Created by Puskal Khadka on 3/27/2023.
  */
 data class ViewState(

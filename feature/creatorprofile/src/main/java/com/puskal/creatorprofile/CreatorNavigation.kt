@@ -1,5 +1,7 @@
 package com.puskal.creatorprofile
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -18,6 +20,7 @@ import com.puskal.creatorprofile.screen.creatorprofile.CreatorProfileScreen as C
  */
 
 fun NavGraphBuilder.creatorProfileNavGraph(navController: NavController) {
+
     composable(route = "$CREATOR_PROFILE_ROUTE/{$USER_ID}",
         arguments = listOf(
             navArgument(USER_ID) { type = NavType.StringType }
@@ -25,7 +28,8 @@ fun NavGraphBuilder.creatorProfileNavGraph(navController: NavController) {
     ) {
         CreatorProfileScreen1(
             onClickNavIcon = { navController.navigate("home_screen_route") },
-            navController = navController
+            navController = navController,
+
         )
     }
 

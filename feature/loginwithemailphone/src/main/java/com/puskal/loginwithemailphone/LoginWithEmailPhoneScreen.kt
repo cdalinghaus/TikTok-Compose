@@ -57,14 +57,14 @@ fun LoginWithEmailPhoneScreen(
                 .fillMaxSize()
                 .padding(it)
         ) {
-            LoginPager(viewModel)
+            LoginPager(viewModel, navController)
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun LoginPager(viewModel: LoginWithEmailPhoneViewModel) {
+internal fun LoginPager(viewModel: LoginWithEmailPhoneViewModel, navController: NavController) {
     val pagerState = rememberPagerState()
     val pages = LoginPages.values().asList().slice(1..1)
     val coroutineScope = rememberCoroutineScope()
@@ -113,8 +113,8 @@ internal fun LoginPager(viewModel: LoginWithEmailPhoneViewModel) {
 
         when (page) {
             //0 -> PhoneTabScreen(viewModel)
-            0 -> EmailUsernameTabScreen(viewModel)
-            1 -> EmailUsernameTabScreen(viewModel)
+            0 -> EmailUsernameTabScreen(viewModel, navController)
+            1 -> EmailUsernameTabScreen(viewModel, navController)
         }
     }
 }
