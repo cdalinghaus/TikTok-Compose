@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import androidx.activity.compose.BackHandler
 
 object SharedPreferencesManager {
     private const val PREFS_NAME = "MyAppPrefs"
@@ -96,9 +97,16 @@ fun CreatorProfileScreen(
     val viewState by viewModel.viewState.collectAsState()
     val creatorProfileState by viewModel.creatorProfile.collectAsState()
 
-
     //val viewState: MutableStateFlow<UserModel?> = MutableStateFlow(null)
     val scrollState = rememberScrollState()
+
+    // Handling back button press
+    BackHandler {
+        navController.navigate("HOME_SCREEN_ROUTE")
+    }
+
+
+
 
 
     Scaffold(
@@ -269,9 +277,9 @@ fun ColumnScope.ProfileDetails(creatorProfile: UserModel?, navController: NavCon
             Log.d("profilestate", creatorProfile.toString())
             if(creatorProfile != null) {
                 if(creatorProfile.isFollowed) {
-                    Text(text = "UNFOLLOW")
+                    Text(text = stringResource(R.string.unfollow))
                 } else {
-                    Text(text = stringResource(id = R.string.follow))
+                    Text(text = stringResource(R.string.follow))
                 }
             } else {
                 Text(text = "Loading")
