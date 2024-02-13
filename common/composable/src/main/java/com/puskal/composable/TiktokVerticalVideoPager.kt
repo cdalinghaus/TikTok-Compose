@@ -1,6 +1,7 @@
 package com.puskal.composable
 
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -59,6 +60,7 @@ import retrofit2.http.Path
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 
 data class FeedResponse(
@@ -108,6 +110,7 @@ suspend fun downloadAndSaveVideo(context: Context, videoUrl: String, fileName: S
 /**
  * Created by Puskal Khadka on 3/16/2023.
  */
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
@@ -127,6 +130,7 @@ fun TikTokVerticalVideoPager(
     val pagerState = rememberPagerState(initialPage = initialPage ?: 0)
     val coroutineScope = rememberCoroutineScope()
     val localDensity = LocalDensity.current
+    val scaffoldState = rememberScaffoldState()
 
     // Make videos mutable
     var mutable_videos by remember { mutableStateOf(videos) }
@@ -140,8 +144,8 @@ fun TikTokVerticalVideoPager(
         )
     )
 
-    LaunchedEffect(pagerState) {
-        // Collect from the a snapshotFlow reading the currentPage
+        LaunchedEffect(pagerState) {
+            // Collect from the a snapshotFlow reading the currentPage
             snapshotFlow { pagerState.currentPage }.collect { page ->
                 // Do something with each page change, for example:
                 // viewModel.sendPageSelectedEvent(page)
@@ -156,6 +160,9 @@ fun TikTokVerticalVideoPager(
                 //Log.d("Page change", "List length is now (after the code $length")
 
                 val okHttpClient = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS) // Set the connection timeout
+                    .readTimeout(30, TimeUnit.SECONDS) // Set the read timeout
+                    .writeTimeout(30, TimeUnit.SECONDS) // Set the write timeout
                     .addInterceptor(AuthInterceptor(context))
                     .build()
 
@@ -169,33 +176,35 @@ fun TikTokVerticalVideoPager(
                 val statisticsApi = retrofit.create(StatisticsApi::class.java)
 
                 CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // val tmpr = statisticsApi.getFeed(stream_id, explored_until)
+                        //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
 
-                    // val tmpr = statisticsApi.getFeed(stream_id, explored_until)
-                    //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
+
+                        val response = statisticsApi.getFeed(stream_id, explored_until)
 
 
-                    val response = statisticsApi.getFeed(stream_id, explored_until)
-                    Log.d("STREAMID", "Loading stream " + stream_id)
-                    if (response.isSuccessful) {
-                        val feedResponse = response.body()
+                        Log.d("STREAMID", "Loading stream " + stream_id)
+                        if (response.isSuccessful) {
+                            val feedResponse = response.body()
 
-                        //Log.d("MUTABLE VIDEOS", mutable_videos.toString())
-                        //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
+                            Log.d("MUTABLE VIDEOS", mutable_videos.toString())
+                            //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
 
-                        if (stream_id.length < 3) {
-                            stream_id = response.body()!!.stream_id
-                        }
-
-                        val videos_from_api = response.body()!!.videos;
-                        if (videos_from_api.size >= mutable_videos.size) {
-                            //Log.d("VIDEO INFO", videos_from_api.toString())
-                            if(videos_from_api.size == 1) {
-                                mutable_videos = videos_from_api + videos_from_api
-                            } else {
-                                mutable_videos = videos_from_api
+                            if (stream_id.length < 3) {
+                                stream_id = response.body()!!.stream_id
                             }
 
-                        }
+                            val videos_from_api = response.body()!!.videos;
+                            if (videos_from_api.size >= mutable_videos.size) {
+                                //Log.d("VIDEO INFO", videos_from_api.toString())
+                                if (videos_from_api.size == 1) {
+                                    mutable_videos = videos_from_api + videos_from_api
+                                } else {
+                                    mutable_videos = videos_from_api
+                                }
+
+                            }
 
                         for (video in videos_from_api) {
                             //Log.d("videolink", video.videoLink)
@@ -211,17 +220,29 @@ fun TikTokVerticalVideoPager(
                         }
 
 
-                        //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
 
-                        //Log.d("FEED RESPONSE", feedResponse.toString())
-                    } else {
-                        // Handle error
-                    }
+                            //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
+
+                            //Log.d("FEED RESPONSE", feedResponse.toString())
+                        } else {
+                            // Handle error
+                            Log.d("Load ERROR", "unsuccessful request")
+                        }
+                    } catch (e: Exception) {
+
+                        // Handle exceptions like timeouts, no internet connection, etc.
+                        scaffoldState.snackbarHostState.showSnackbar(
+                            message = "Error: ${e.message}",
+                            duration = SnackbarDuration.Short
+                        )
+                        }
+
                 }
 
 
             }
-    }
+        }
+
 
     VerticalPager(
         pageCount = mutable_videos.size,
