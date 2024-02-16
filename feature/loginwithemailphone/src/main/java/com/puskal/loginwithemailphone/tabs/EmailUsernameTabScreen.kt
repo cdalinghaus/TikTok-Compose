@@ -103,6 +103,7 @@ object SharedPreferencesManager {
     }
 }
 
+
 val retrofit = Retrofit.Builder()
     .baseUrl("https://api.reemix.co/api/v2/")
     .addConverterFactory(GsonConverterFactory.create())

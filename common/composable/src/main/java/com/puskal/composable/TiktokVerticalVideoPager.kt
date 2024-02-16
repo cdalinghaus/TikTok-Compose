@@ -50,6 +50,8 @@ import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.os.Environment
 import androidx.compose.ui.text.style.TextOverflow
+import com.google.gson.Gson
+import com.puskal.data.model.UserModel
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.Interceptor
@@ -77,6 +79,33 @@ interface StatisticsApi {
     ): Response<FeedResponse>
 }
 
+object SharedPreferencesManager {
+    private const val PREFS_NAME = "MyAppPrefs"
+    private const val TOKEN_KEY = "auth_token"
+    private const val USER_KEY = "auth_user"
+
+    fun saveToken(context: Context, token: String) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString(TOKEN_KEY, token).apply()
+    }
+
+    fun getToken(context: Context): String? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return sharedPrefs.getString(TOKEN_KEY, null)
+    }
+
+    fun saveUser(context: Context, user: UserModel) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = Gson().toJson(user)
+        sharedPrefs.edit().putString(USER_KEY, userJson).apply()
+    }
+
+    fun getUser(context: Context): UserModel? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = sharedPrefs.getString(USER_KEY, null)
+        return userJson?.let { Gson().fromJson(it, UserModel::class.java) }
+    }
+}
 
 
 suspend fun downloadAndSaveVideo(context: Context, videoUrl: String, fileName: String) {
@@ -137,6 +166,7 @@ fun TikTokVerticalVideoPager(
     var stream_id by remember { mutableStateOf("") }
     var explored_until by remember { mutableStateOf(0) }
     val context = LocalContext.current
+
 
     val fling = PagerDefaults.flingBehavior(
         state = pagerState, lowVelocityAnimationSpec = tween(
@@ -409,6 +439,8 @@ fun SideItems(
 ) {
 
     val context = LocalContext.current
+    val isUserLoggedIn = SharedPreferencesManager.getToken(context) != null
+
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         AsyncImage(
             model = item.authorDetails.profilePic,
@@ -449,9 +481,9 @@ fun SideItems(
         }
 
 
-
         LikeIconButton(isLiked = isLiked,
             likeCount = likeCount.toInt(),
+            isEnabled = isUserLoggedIn,
             onLikedClicked = { liked ->
                 isLiked = !isLiked
                 likeCount = if (liked) likeCount + 1 else likeCount - 1
@@ -521,9 +553,10 @@ fun SideItems(
 
         SaveIconButton(isSaved = isSaved,
             saveCount = saveCount.toString(),
+            isEnabled = isUserLoggedIn,
             onSavedClicked = { saved ->
                 isSaved = !isSaved
-                saveCount = if (saved) likeCount + 1 else likeCount - 1
+                saveCount = if (saved) saveCount + 1 else saveCount - 1
 
                 // Determine the endpoint based on the save status
                 val endpoint = if (saved) "save" else "unsave"
@@ -574,7 +607,7 @@ fun SideItems(
                 .clickable {
                     onClickShare?.let { onClickShare.invoke() } ?: run {
                         context.share(
-                            text = "https://github.com/puskal-khadka"
+                            text = "https://reemix.co/v/${item.videoId}"
                         )
                     }
                 }
@@ -593,19 +626,20 @@ fun SideItems(
 fun LikeIconButton(
     isLiked: Boolean,
     likeCount: Int,
-    onLikedClicked: (Boolean) -> Unit
+    onLikedClicked: (Boolean) -> Unit,
+    isEnabled: Boolean = true // Adding isEnabled parameter with default value true
 ) {
     val iconSize = 32.dp // Adjust size as needed
 
     Box(
         modifier = Modifier
-            .clickable { onLikedClicked(!isLiked) },
+            .clickable(enabled = isEnabled) { onLikedClicked(!isLiked) }, // Use isEnabled to control clickable
         contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_heart),
             contentDescription = null,
-            tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White,
+            tint = if (!isEnabled) Color.Gray else if  (isLiked) MaterialTheme.colorScheme.primary else Color.White, // Use MaterialTheme.colors for compatibility
             modifier = Modifier.size(iconSize)
         )
     }
@@ -617,7 +651,8 @@ fun LikeIconButton(
 fun SaveIconButton(
     isSaved: Boolean,
     saveCount: String,
-    onSavedClicked: (Boolean) -> Unit
+    onSavedClicked: (Boolean) -> Unit,
+    isEnabled: Boolean = true // Add isEnabled parameter with default value true
 ) {
     var saved by remember { mutableStateOf(isSaved) }
 
@@ -636,7 +671,11 @@ fun SaveIconButton(
     Box(
         modifier = Modifier
             .size(maxSize)
-            .clickable(interactionSource = MutableInteractionSource(), indication = null) {
+            .clickable(
+                enabled = isEnabled, // Use isEnabled to control clickable
+                interactionSource = MutableInteractionSource(),
+                indication = null
+            ) {
                 saved = !saved
                 onSavedClicked(saved)
             },
@@ -645,13 +684,13 @@ fun SaveIconButton(
         Icon(
             painter = painterResource(id = if (saved) R.drawable.ic_bookmark else R.drawable.ic_bookmark),
             contentDescription = "Save",
-            tint = if (saved) MaterialTheme.colorScheme.primary else Color.White,
+            tint = if (!isEnabled) Color.Gray else if (saved) MaterialTheme.colorScheme.primary else Color.White, // Adjust tint based on isEnabled and saved state
             modifier = Modifier.size(iconSize)
         )
     }
 
     Text(text = saveCount, style = MaterialTheme.typography.labelMedium)
-    16.dp.Space()
+    // Removed the incorrect `16.dp.Space()` line as it's not a valid code statement
 }
 
 

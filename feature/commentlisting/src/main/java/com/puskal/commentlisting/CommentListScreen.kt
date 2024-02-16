@@ -34,6 +34,8 @@ import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.gson.Gson
+import com.puskal.composable.SharedPreferencesManager
 import com.puskal.composable.StatisticsApi
 
 
@@ -41,6 +43,7 @@ import com.puskal.composable.StatisticsApi
 import com.puskal.composable.downloadAndSaveVideo
 import com.puskal.core.extension.Space
 import com.puskal.data.model.CommentList
+import com.puskal.data.model.UserModel
 import com.puskal.data.model.VideoModel
 import com.puskal.theme.DarkBlue
 import com.puskal.theme.GrayMainColor
@@ -67,6 +70,33 @@ import okhttp3.Response as okhttpResponse
  * Created by Puskal Khadka on 3/22/2023.
  */
 
+object SharedPreferencesManager {
+    private const val PREFS_NAME = "MyAppPrefs"
+    private const val TOKEN_KEY = "auth_token"
+    private const val USER_KEY = "auth_user"
+
+    fun saveToken(context: Context, token: String) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString(TOKEN_KEY, token).apply()
+    }
+
+    fun getToken(context: Context): String? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return sharedPrefs.getString(TOKEN_KEY, null)
+    }
+
+    fun saveUser(context: Context, user: UserModel) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = Gson().toJson(user)
+        sharedPrefs.edit().putString(USER_KEY, userJson).apply()
+    }
+
+    fun getUser(context: Context): UserModel? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = sharedPrefs.getString(USER_KEY, null)
+        return userJson?.let { Gson().fromJson(it, UserModel::class.java) }
+    }
+}
 
 
 interface CommentInterface {
@@ -255,6 +285,7 @@ fun CommentItem(item: CommentList.Comment) {
 @Composable
 fun CommentUserField(viewState: ViewState) {
     val context = LocalContext.current
+    val isUserLoggedIn = SharedPreferencesManager.getToken(context) != null
 
     Column(
         modifier = Modifier
@@ -294,11 +325,11 @@ fun CommentUserField(viewState: ViewState) {
                     Text(text = stringResource(R.string.add_comment))
                 },
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = GrayMainColor,
-                    unfocusedBorderColor = Color.Transparent
+                    containerColor = if (!isUserLoggedIn) Color.Gray else GrayMainColor,
+                    unfocusedBorderColor = Color.Transparent,
                 ),
                 modifier = Modifier.height(46.dp),
-                enabled = true,
+                enabled = isUserLoggedIn,
                 trailingIcon = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
