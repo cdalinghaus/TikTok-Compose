@@ -8,7 +8,7 @@ import com.puskal.core.extension.randomUploadDate
  */
 data class VideoModel(
     val videoId: String,
-    val authorDetails: UserModel,
+    var authorDetails: UserModel,
     val videoStats: VideoStats,
     var videoLink: String,
     var thumbnailLink: String,

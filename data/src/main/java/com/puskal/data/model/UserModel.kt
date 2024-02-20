@@ -10,7 +10,7 @@ data class UserModel(
     val userId: Long = 12333,
     val uniqueUserName: String = "PETEROTTO123",
     val fullName: String = "PETER OTTO",
-    val following: Long = 123333,
+    var following: Long = 123333,
     val followers: Long = 1233,
     //@SerializedName("likes")
     val likes: Long = 333,

@@ -1,5 +1,6 @@
 package com.puskal.myprofile
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -19,11 +20,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.gson.Gson
 import com.puskal.composable.CustomButton
 import com.puskal.composable.TopBar
 import com.puskal.core.DestinationRoute
 import com.puskal.core.DestinationRoute.SETTING_ROUTE
-import com.puskal.loginwithemailphone.tabs.SharedPreferencesManager
 import com.puskal.theme.R
 import com.puskal.theme.SubTextColor
 import com.puskal.data.model.UserModel
@@ -31,6 +32,8 @@ import com.puskal.data.model.UserModel
 /**
  * Created by Puskal Khadka on 4/1/2023.
  */
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +62,33 @@ fun MyProfileScreen(navController: NavController) {
         }
     }
 }
+object SharedPreferencesManager {
+    private const val PREFS_NAME = "MyAppPrefs"
+    private const val TOKEN_KEY = "auth_token"
+    private const val USER_KEY = "auth_user"
 
+    fun saveToken(context: Context, token: String) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString(TOKEN_KEY, token).apply()
+    }
+
+    fun getToken(context: Context): String? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return sharedPrefs.getString(TOKEN_KEY, null)
+    }
+
+    fun saveUser(context: Context, user: UserModel) {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = Gson().toJson(user)
+        sharedPrefs.edit().putString(USER_KEY, userJson).apply()
+    }
+
+    fun getUser(context: Context): UserModel? {
+        val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userJson = sharedPrefs.getString(USER_KEY, null)
+        return userJson?.let { Gson().fromJson(it, UserModel::class.java) }
+    }
+}
 
 @Composable
 fun UnAuthorizedInboxScreen(onClickSignup: () -> Unit, navController: NavController) {

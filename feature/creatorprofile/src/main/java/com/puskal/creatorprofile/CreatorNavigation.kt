@@ -41,6 +41,7 @@ fun NavGraphBuilder.creatorProfileNavGraph(navController: NavController) {
     ) {
         CreatorVideoPagerScreen(
             onClickNavIcon = { navController.navigateUp() },
+            navController = navController,
             onclickComment = { navController.navigate(COMMENT_BOTTOM_SHEET_ROUTE) },
             onClickAudio = {},
             onClickUser = { navController.navigateUp() }

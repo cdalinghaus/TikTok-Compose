@@ -48,7 +48,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 import android.content.Context
+import android.os.Build
 import android.os.Environment
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.gson.Gson
 import com.puskal.data.model.UserModel
@@ -63,13 +65,32 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 data class FeedResponse(
     val stream_id: String,
     val videos: List<VideoModel>
 )
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatTimeAgo(timestamp: String): String {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val past = LocalDateTime.parse(timestamp, formatter)
+    val now = LocalDateTime.now()
 
+    val seconds = ChronoUnit.SECONDS.between(past, now)
+    val minutes = ChronoUnit.MINUTES.between(past, now)
+    val hours = ChronoUnit.HOURS.between(past, now)
+    val days = ChronoUnit.DAYS.between(past, now)
+
+    return when {
+        seconds < 60 -> "$seconds seconds ago"
+        minutes < 60 -> "$minutes minutes ago"
+        hours < 24 -> "$hours hours ago"
+        else -> "$days days ago"
+    }
+}
 interface StatisticsApi {
 
     @GET("feed")
@@ -78,6 +99,7 @@ interface StatisticsApi {
         @Query("explored_until") exploredUntil: Int
     ): Response<FeedResponse>
 }
+
 
 object SharedPreferencesManager {
     private const val PREFS_NAME = "MyAppPrefs"
@@ -154,7 +176,8 @@ fun TikTokVerticalVideoPager(
     onClickAudio: (VideoModel) -> Unit,
     onClickUser: (userId: String) -> Unit,
     onClickFavourite: (isFav: Boolean) -> Unit = {},
-    onClickShare: (() -> Unit)? = null
+    onClickShare: (() -> Unit)? = null,
+    loadNewFeedVideos_USE_ONLY_ON_FRONTPAGE: Boolean = true
 ) {
     val pagerState = rememberPagerState(initialPage = initialPage ?: 0)
     val coroutineScope = rememberCoroutineScope()
@@ -210,53 +233,57 @@ fun TikTokVerticalVideoPager(
                         // val tmpr = statisticsApi.getFeed(stream_id, explored_until)
                         //Log.d("STREAM DEBUG", "Loading stream " + stream_id)
 
+                        // This makes sure that new videos are NOT loaded when this player
+                        // is instantiated as part of the user profile :)
+                        if(loadNewFeedVideos_USE_ONLY_ON_FRONTPAGE) {
 
-                        val response = statisticsApi.getFeed(stream_id, explored_until)
+                            val response = statisticsApi.getFeed(stream_id, explored_until)
 
 
-                        Log.d("STREAMID", "Loading stream " + stream_id)
-                        if (response.isSuccessful) {
-                            val feedResponse = response.body()
+                            Log.d("STREAMID", "Loading stream " + stream_id)
+                            if (response.isSuccessful) {
+                                val feedResponse = response.body()
 
-                            Log.d("MUTABLE VIDEOS", mutable_videos.toString())
-                            //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
+                                Log.d("MUTABLE VIDEOS", mutable_videos.toString())
+                                //Log.d("VIDEO PICK", response.body()!!.videos[0].toString())
 
-                            if (stream_id.length < 3) {
-                                stream_id = response.body()!!.stream_id
-                            }
-
-                            val videos_from_api = response.body()!!.videos;
-                            if (videos_from_api.size >= mutable_videos.size) {
-                                //Log.d("VIDEO INFO", videos_from_api.toString())
-                                if (videos_from_api.size == 1) {
-                                    mutable_videos = videos_from_api + videos_from_api
-                                } else {
-                                    mutable_videos = videos_from_api
+                                if (stream_id.length < 3) {
+                                    stream_id = response.body()!!.stream_id
                                 }
 
+                                val videos_from_api = response.body()!!.videos;
+                                if (videos_from_api.size >= mutable_videos.size) {
+                                    //Log.d("VIDEO INFO", videos_from_api.toString())
+                                    if (videos_from_api.size == 1) {
+                                        mutable_videos = videos_from_api + videos_from_api
+                                    } else {
+                                        mutable_videos = videos_from_api
+                                    }
+
+                                }
+
+                            for (video in videos_from_api) {
+                                //Log.d("videolink", video.videoLink)
+
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    val videoUrl = video.videoLink
+                                    val fileName = video.videoLink.split("/").last()
+                                    downloadAndSaveVideo(context, videoUrl, fileName)
+                                }
+                                // Update UI or video player with the new local path
+
+
                             }
 
-                        for (video in videos_from_api) {
-                            //Log.d("videolink", video.videoLink)
 
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val videoUrl = video.videoLink
-                                val fileName = video.videoLink.split("/").last()
-                                downloadAndSaveVideo(context, videoUrl, fileName)
+
+                                //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
+
+                                //Log.d("FEED RESPONSE", feedResponse.toString())
+                            } else {
+                                // Handle error
+                                Log.d("Load ERROR", "unsuccessful request")
                             }
-                            // Update UI or video player with the new local path
-
-
-                        }
-
-
-
-                            //Log.d("VIDEO THAT WAS ADDED", response.body()!!.videos[0].toString())
-
-                            //Log.d("FEED RESPONSE", feedResponse.toString())
-                        } else {
-                            // Handle error
-                            Log.d("Load ERROR", "unsuccessful request")
                         }
                     } catch (e: Exception) {
 
@@ -456,17 +483,92 @@ fun SideItems(
                 },
             contentScale = ContentScale.Crop
         )
+
+        var followStatus by remember { mutableStateOf(item.authorDetails.following > 0) }
+
         Image(
-            painter = painterResource(id = R.drawable.ic_plus),
+            painter = painterResource(id = (if (followStatus) R.drawable.ic_plus else R.drawable.ic_plus)),
             contentDescription = null,
             modifier = Modifier
                 .offset(y = (-10).dp)
                 .size(20.dp)
                 .clip(CircleShape)
-                .background(color = MaterialTheme.colorScheme.primary)
-                .padding(5.5.dp),
+                .background(color = (if (followStatus) Color.Green else MaterialTheme.colorScheme.primary))
+                .padding(5.5.dp)
+                .clickable {
+                    val currentProfile = item.authorDetails
+
+                    followStatus = !followStatus
+                    // Toggle the follow state
+                    var new_follower_count = 0L
+                    var new_isfollowed = false
+                    if (currentProfile.isFollowed) {
+                        new_follower_count = currentProfile.followers - 1
+                        new_isfollowed = false
+                    } else {
+                        new_follower_count = currentProfile.followers + 1
+                        new_isfollowed = true
+                    }
+
+                    val updatedProfile = currentProfile.copy(
+                        isFollowed = new_isfollowed,
+                        followers = new_follower_count
+                    )
+
+                    // Update the MutableStateFlow with the new instance
+                    item.authorDetails = updatedProfile
+
+                    // Rest of your network request logic...
+
+                    val currentState = currentProfile.isFollowed
+                    // Update the MutableStateFlow
+                    Log.d("State change", currentProfile.isFollowed.toString())
+                    item.authorDetails.following  = if (!currentState) 1L else 0L
+                    Log.d("State change", currentProfile.isFollowed.toString())
+
+                    // API call logic...
+
+                    // Determine the endpoint based on the follow status
+                    val endpoint = if (currentState) "unfollow" else "follow"
+                    val url = "https://api.reemix.co/api/v2/creators/${item.authorDetails.uniqueUserName}/$endpoint"
+                    Log.d("FOLLOW_ENDPOINT", url.toString())
+
+                    // Create a coroutine to make the network request
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            // Prepare the request
+                            val request = Request.Builder()
+                                .url(url)
+                                .post(FormBody.Builder().build()) // Assuming a POST request
+                                .build()
+
+                            val okHttpClient = OkHttpClient.Builder()
+                                .addInterceptor(AuthInterceptor(context))
+                                .build()
+
+                            // Execute the request
+                            val response = okHttpClient.newCall(request).execute()
+
+                            if (response.isSuccessful) {
+                                // Handle successful response
+                                Log.d("FOLLOW_ENDPOINT", "SUCCESS! Status Code: ${response.code}")
+
+                            } else {
+                                // Handle error
+                                Log.d("FOLLOW_ENDPOINT", "NO SUCCESS! Status Code: ${response.code}")
+                                val errorBody = response.body?.string()
+                                Log.d("FOLLOW_ENDPOINT", "Error Body: $errorBody")
+                            }
+                        } catch (e: Exception) {
+                            // Handle exception
+                            Log.e("FOLLOW_ENDPOINT", "Exception: ${e.message}")
+                        }
+                    }
+                },
             colorFilter = ColorFilter.tint(Color.White)
         )
+
+
 
         12.dp.Space()
 
@@ -695,6 +797,7 @@ fun SaveIconButton(
 
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FooterUi(
@@ -711,13 +814,11 @@ fun FooterUi(
             Text(
                 text = item.authorDetails.fullName, style = MaterialTheme.typography.bodyMedium
             )
-            if (true) {
-                Text(
-                    text = " . ${item.createdAt} ago",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
+            Text(
+                text = " ⸱ ${formatTimeAgo(item.createdAt)}",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.6f)
+            )
         }
         5.dp.Space()
         Text(

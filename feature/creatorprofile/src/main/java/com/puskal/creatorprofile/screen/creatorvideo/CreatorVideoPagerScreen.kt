@@ -19,7 +19,8 @@ import com.puskal.creatorprofile.component.*
 import com.puskal.data.model.VideoModel
 import com.puskal.theme.R
 import com.puskal.theme.SubTextColor
-
+import androidx.navigation.NavController
+import com.puskal.core.DestinationRoute.COMMENT_BOTTOM_SHEET_ROUTE
 
 /**
  * Created by Puskal Khadka on 3/22/2023.
@@ -29,6 +30,7 @@ import com.puskal.theme.SubTextColor
 @Composable
 fun CreatorVideoPagerScreen(
     onClickNavIcon: () -> Unit,
+    navController: NavController,
     onclickComment: (videoId: String) -> Unit,
     onClickAudio: (VideoModel) -> Unit,
     onClickUser: (userId: String) -> Unit,
@@ -55,13 +57,16 @@ fun CreatorVideoPagerScreen(
                 TikTokVerticalVideoPager(
                     videos = it,
                     showUploadDate = true,
-                    onclickComment = onclickComment,
+                    onclickComment = { videoId -> navController.navigate("$COMMENT_BOTTOM_SHEET_ROUTE/$videoId") },
                     onClickLike = { s: String, b: Boolean -> },
                     onclickFavourite = {},
                     onClickAudio = onClickAudio,
                     onClickUser = onClickUser,
                     initialPage = viewModel.videoIndex,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    // This makes sure no new videos are loaded when the player is instantiated from
+                    // the user profile page.
+                    loadNewFeedVideos_USE_ONLY_ON_FRONTPAGE = false
                 )
 
                 Divider(

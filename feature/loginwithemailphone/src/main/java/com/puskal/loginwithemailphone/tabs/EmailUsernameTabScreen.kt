@@ -85,7 +85,7 @@ object SharedPreferencesManager {
         sharedPrefs.edit().putString(TOKEN_KEY, token).apply()
     }
 
-    fun getToken(context: Context): String? {
+    fun TikTokVerticalVideoPager(context: Context): String? {
         val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return sharedPrefs.getString(TOKEN_KEY, null)
     }
