@@ -4,7 +4,6 @@ package com.puskal.composable
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Environment
 import android.util.Log
 import android.view.ViewGroup
 import androidx.compose.animation.*
@@ -31,12 +30,16 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
+import com.google.gson.Gson
 import com.puskal.core.utils.FileUtils
 import com.puskal.data.model.VideoModel
 import com.puskal.theme.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.io.File
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Created by Puskal Khadka on 3/16/2023.
@@ -54,18 +57,79 @@ fun VideoPlayer(
     onVideoGoBackground: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var previewUrl by remember { mutableStateOf<String?>(null) }
+
+
+
     var thumbnail by remember {
         mutableStateOf<Pair<Bitmap?, Boolean>>(Pair(null, true))  //bitmap, isShow
     }
     var isFirstFrameLoad = remember { false }
 
-    LaunchedEffect(key1 = true) {
+    var previewLoaded = remember { false }
+
+    val thisvideo = remember { mutableStateOf(video) }
+
+    class VideoResponseWrapper {
+        var data: VideoModel? = null
+    }
+
+
+
+    if (!video.playable) {
+        LaunchedEffect(Unit) {
+            val targetEndpoint = "https://api.reemix.co/api/v2/videos/${video.videoId}"
+            Log.d("xd", "before loop")
+
+            while (true) { // Ensures the coroutine stops when no longer active
+                Log.d("xd", "in loop")
+                try {
+                    withContext(Dispatchers.IO) {
+                        // Create a URL and connection object
+                        val url = URL(targetEndpoint)
+                        val connection = url.openConnection() as HttpURLConnection
+                        connection.requestMethod = "GET"
+                        connection.connect()
+
+                        val responseCode = connection.responseCode
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            val inputStream = connection.inputStream
+                            val response = inputStream.bufferedReader().use { it.readText() }
+                            withContext(Dispatchers.Main) {
+                                val gson = Gson()
+                                val responseWrapper: VideoResponseWrapper = gson.fromJson(response, VideoResponseWrapper::class.java)
+                                val updatedVideo: VideoModel? = responseWrapper.data
+
+                                Log.d("theoretically found", "new video" + updatedVideo.toString() )
+                                if (updatedVideo != null) {
+                                    thisvideo.value = updatedVideo
+                                }
+
+
+                            }
+                        } else {
+                            Log.e("VideoFetch", "responseCode == HttpURLConnection.HTTP_OK not ok")
+                        }
+                    } as HttpURLConnection
+                } catch (e: Exception) {
+                    Log.e("VideoPreviewFetch", "Error fetching video preview: ${e.message}")
+                }
+                delay(5000) // Wait for 5 seconds before the next fetch
+            }
+        }
+    }
+
+
+
+    LaunchedEffect(thisvideo.value) {
         withContext(Dispatchers.IO) {
-            val bitmap: Bitmap? = if (video.videoLink.startsWith("https://")) {
+            val bitmap: Bitmap? = if (thisvideo.value.videoLink.startsWith("https://") == true) {
                 // For remote URLs
                 val retriever = MediaMetadataRetriever()
                 try {
-                    retriever.setDataSource(video.videoLink, HashMap())
+                    retriever.setDataSource(thisvideo.value.videoLink, HashMap())
                     val timeUs = 1_000L  // 1 millisecond into the video
                     retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
                 } catch (e: Exception) {
@@ -77,7 +141,7 @@ fun VideoPlayer(
             } else {
                 // For local assets
                 FileUtils.extractThumbnail(
-                    context.assets.openFd("videos/${video.videoLink}"), 1
+                    context.assets.openFd("videos/${thisvideo.value.videoLink}"), 1
                 )
             }
             bitmap?.let { bm ->
@@ -90,18 +154,38 @@ fun VideoPlayer(
 
 
     if (pagerState.settledPage == pageIndex) {
-        val exoPlayer = remember(context) {
-            ExoPlayer.Builder(context).build().apply {
-                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-                repeatMode = Player.REPEAT_MODE_ONE
+            // Remember the ExoPlayer instance
+            val exoPlayer = remember {
+                ExoPlayer.Builder(context).build().apply {
+                    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+                    repeatMode = Player.REPEAT_MODE_ONE
+                    playWhenReady = true
+                    prepare()
+                    addListener(object : Player.Listener {
+                        override fun onRenderedFirstFrame() {
+                            super.onRenderedFirstFrame()
+                            isFirstFrameLoad = true
+                            thumbnail = thumbnail.copy(second = false)
+                        }
+                    })
+                }
+            }
 
-                //val fileName = video.videoLink.split("/").last()
-                //val file = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), fileName)
-                setMediaItem(MediaItem.fromUri(Uri.parse(video.videoLink)))
+            // Update ExoPlayer's media item when videolink changes
+            LaunchedEffect(thisvideo.value) {
+                Log.d("LIFECYCLE", "updated!!! (theoretically)" + thisvideo.value.videoLink)
+                exoPlayer.setMediaItem(
+                    MediaItem.fromUri(Uri.parse(thisvideo.value.videoLink)), /* resetPosition */
+                    true
+                )
+                exoPlayer.prepare()
+                exoPlayer.playWhenReady = true
+                exoPlayer.play()
+            }
 
-                playWhenReady = true
-                prepare()
-                addListener(object : Player.Listener {
+            // Add Listener to exoPlayer to handle first frame rendered
+            LaunchedEffect(key1 = exoPlayer) {
+                exoPlayer.addListener(object : Player.Listener {
                     override fun onRenderedFirstFrame() {
                         super.onRenderedFirstFrame()
                         isFirstFrameLoad = true
@@ -109,9 +193,9 @@ fun VideoPlayer(
                     }
                 })
             }
-        }
 
-        val lifecycleOwner by rememberUpdatedState(LocalLifecycleOwner.current)
+
+        //val lifecycleOwner by rememberUpdatedState(LocalLifecycleOwner.current)
         DisposableEffect(key1 = lifecycleOwner) {
             val lifeCycleObserver = LifecycleEventObserver { _, event ->
                 when (event) {
@@ -167,8 +251,5 @@ fun VideoPlayer(
     }
 
 }
-
-
-
 
 

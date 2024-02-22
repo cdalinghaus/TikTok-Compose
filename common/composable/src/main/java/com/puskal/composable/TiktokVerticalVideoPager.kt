@@ -51,6 +51,9 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.google.gson.Gson
 import com.puskal.data.model.UserModel
@@ -68,6 +71,8 @@ import java.util.concurrent.TimeUnit
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.Instant
+import java.time.ZoneOffset
 
 data class FeedResponse(
     val stream_id: String,
@@ -77,7 +82,7 @@ data class FeedResponse(
 fun formatTimeAgo(timestamp: String): String {
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     val past = LocalDateTime.parse(timestamp, formatter)
-    val now = LocalDateTime.now()
+    val now = LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC)
 
     val seconds = ChronoUnit.SECONDS.between(past, now)
     val minutes = ChronoUnit.MINUTES.between(past, now)
@@ -91,14 +96,25 @@ fun formatTimeAgo(timestamp: String): String {
         else -> "$days days ago"
     }
 }
+/*
 interface StatisticsApi {
 
-    @GET("feed")
+    @GET("feed/fyp/<stream>")
     suspend fun getFeed(
         @Query("stream") param: String,
         @Query("explored_until") exploredUntil: Int
     ): Response<FeedResponse>
+}*/
+
+interface StatisticsApi {
+
+    @GET("feed/fyp/{stream}")
+    suspend fun getFeed(
+        @Path("stream") stream: String,
+        @Query("explored_until") exploredUntil: Int
+    ): Response<FeedResponse>
 }
+
 
 
 object SharedPreferencesManager {
@@ -487,13 +503,13 @@ fun SideItems(
         var followStatus by remember { mutableStateOf(item.authorDetails.following > 0) }
 
         Image(
-            painter = painterResource(id = (if (followStatus) R.drawable.ic_plus else R.drawable.ic_plus)),
+            painter = painterResource(id = (if (followStatus) R.drawable.ic_cancel else R.drawable.ic_plus)),
             contentDescription = null,
             modifier = Modifier
                 .offset(y = (-10).dp)
                 .size(20.dp)
                 .clip(CircleShape)
-                .background(color = (if (followStatus) Color.Green else MaterialTheme.colorScheme.primary))
+                .background(color = (if (followStatus) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary))
                 .padding(5.5.dp)
                 .clickable {
                     val currentProfile = item.authorDetails
@@ -819,6 +835,18 @@ fun FooterUi(
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White.copy(alpha = 0.6f)
             )
+            if(!item.playable) {
+                Text(
+                    text = "Processing",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = White,
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(20))
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                )
+
+            }
+
         }
         5.dp.Space()
         Text(

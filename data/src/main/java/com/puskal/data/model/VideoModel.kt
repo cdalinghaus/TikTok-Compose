@@ -10,6 +10,7 @@ data class VideoModel(
     val videoId: String,
     var authorDetails: UserModel,
     val videoStats: VideoStats,
+    var playable: Boolean,
     var videoLink: String,
     var thumbnailLink: String,
     val description: String,
