@@ -1,7 +1,9 @@
 package com.puskal.commentlisting
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -63,6 +65,11 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import okhttp3.Response as okhttpResponse
 
 
@@ -135,6 +142,7 @@ class AuthInterceptor(context: Context) : Interceptor {
 data class CommentRequest(val comment: String)
 data class CommentResponse(val placeholder: String)
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CommentListScreen(
     videoId: String = "pass_test",
@@ -187,7 +195,26 @@ fun CommentListScreen(
         }
     }
 
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatTimeAgo(timestamp: String): String {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+    val past = LocalDateTime.parse(timestamp, formatter)
+    val now = LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC)
 
+    val seconds = ChronoUnit.SECONDS.between(past, now)
+    val minutes = ChronoUnit.MINUTES.between(past, now)
+    val hours = ChronoUnit.HOURS.between(past, now)
+    val days = ChronoUnit.DAYS.between(past, now)
+
+    return when {
+        seconds < 60 -> "$seconds seconds ago"
+        minutes < 60 -> "$minutes minutes ago"
+        hours < 24 -> "$hours hours ago"
+        else -> "$days days ago"
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CommentItem(item: CommentList.Comment) {
     ConstraintLayout(
@@ -229,7 +256,7 @@ fun CommentItem(item: CommentList.Comment) {
                 end.linkTo(parent.end)
                 width = Dimension.fillToConstraints
             })
-        Text(text = item.createdAt, modifier = Modifier.constrainAs(createdOn) {
+        Text(text = formatTimeAgo(item.createdAt), modifier = Modifier.constrainAs(createdOn) {
             start.linkTo(name.start)
             top.linkTo(comment.bottom, margin = 5.dp)
         })
